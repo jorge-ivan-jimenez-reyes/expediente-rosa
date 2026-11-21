@@ -27,7 +27,7 @@ struct ClienteAPI: Sendable {
     var sesion: URLSession
     var espera: TimeInterval
 
-    init(base: URL = Config.apiURL, sesion: URLSession = .shared, espera: TimeInterval = 15) {
+    init(base: URL = Config.apiURL, sesion: URLSession = .shared, espera: TimeInterval = 30) {
         self.base = base; self.sesion = sesion; self.espera = espera
     }
 
