@@ -11,6 +11,8 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { comparar, llavesBloque, normalizar, UMBRAL_POSIBLE, type DatosPaciente } from './coincidencias';
 import { cifrar, descifrar, cifradoActivo } from './cifrado';
 import { guardarVector, hayModuloSearch, crearIndice, knn, llaveVector } from './busqueda';
+import { existsSync } from 'node:fs';
+import { armar, revisar, llamarModelo, type Fuente, type BitacoraA } from './asistente';
 
 export const valkey = new Valkey(process.env.VALKEY_URL ?? 'redis://localhost:6379');
 
@@ -1015,6 +1017,84 @@ app.delete('/jornadas/:id', async (c) => {
   return c.json({ ok: true });
 });
 
+// --- Asistente de coordinación ------------------------------------------------
+// Las cifras se calculan aquí (asistente.ts); el modelo de Apple, en la Mac, solo
+// redacta. Sin binario o sin Apple Intelligence responde una redacción fija con
+// las mismas cifras.
+export const ASISTENTE_BIN = process.env.ASISTENTE_BIN
+  ? resolve(process.env.ASISTENTE_BIN)
+  : resolve(dirname(fileURLToPath(import.meta.url)), '../../asistente/.build/release/asistente');
+
+export async function fuenteAsistente(): Promise<Fuente> {
+  const exps = await cargarExpedientes(await valkey.smembers(K.todas));
+  const pacientes = exps.map((x) => ({
+    id: x.p.id, folio: x.p.folio, nombre: x.p.nombre, apellidoPaterno: x.p.apellidoPaterno, apellidoMaterno: x.p.apellidoMaterno,
+    comunidad: x.p.comunidad, estado: x.estado, edad: x.p.edad,
+    visitas: x.visitas.map((v) => ({ fecha: v.fecha, comunidad: v.comunidad, estado: v.estado, jornada: v.jornada })),
+    estudios: x.estudios.map((e) => ({ id: e.id, tipo: e.tipo, fecha: e.fecha, resultado: e.resultado, clasificacion: e.clasificacion, etapa: e.etapa })),
+  }));
+  const porId = new Map(pacientes.map((p) => [p.id, p]));
+
+  const seg = chunk2(await valkey.zrange(K.seguimiento, 0, -1, 'WITHSCORES'));
+  const ps = valkey.pipeline();
+  for (const [id] of seg) ps.hgetall(K.segEstudio(id));
+  const infos = ((await ps.exec()) ?? []).map(([, h]) => h as Record<string, string>);
+  const seguimiento = seg.map(([estudioId, score], i) => {
+    const h = infos[i] ?? {};
+    return { estudioId, pacienteId: h.pacienteId ?? '', tipo: h.tipo, fecha: h.fecha, motivo: h.motivo, limite: Number(score) };
+  }).filter((s) => porId.has(s.pacienteId));
+
+  const pat = chunk2(await valkey.zrange(K.patologia, 0, -1, 'WITHSCORES'));
+  const dueñas = pat.length ? await valkey.hmget(K.estudioPaciente, ...pat.map(([id]) => id)) : [];
+  const patologia = pat.map(([estudioId, score], i) => ({ estudioId, pacienteId: dueñas[i] ?? '', desde: Number(score) }))
+    .filter((x) => porId.get(x.pacienteId)?.estudios.some((e) => e.id === x.estudioId && e.etapa === 'en-laboratorio'));
+
+  const bitacora: BitacoraA[] = ((await valkey.xrevrange(K.eventos, '+', '-', 'COUNT', 500)) as [string, string[]][]).map(([sid, plano]) => {
+    const f: Record<string, string> = {};
+    for (let i = 0; i < plano.length; i += 2) f[plano[i]] = plano[i + 1];
+    const pacienteId = f.pacienteId ?? f.a ?? null;
+    return {
+      cuando: new Date(Number(sid.split('-')[0])).toISOString(), tipo: f.tipo, autor: f.autor ?? f.dispositivo ?? null,
+      pacienteId, estudioId: f.estudioId ?? f.estudio ?? null, comunidad: f.comunidad ?? null,
+      folio: pacienteId ? porId.get(pacienteId)?.folio ?? null : null,
+    };
+  });
+
+  const inicio = epochDia(hoy());
+  const ids = await valkey.zrangebyscore(K.jornadas, inicio, `(${inicio + 30 * DIA_MS}`);
+  const pj = valkey.pipeline();
+  for (const id of ids) pj.hgetall(K.jornadaProgramada(id));
+  const jornadas = ((await pj.exec()) ?? []).map(([, h]) => h as Record<string, string>).filter((h) => h?.id).map(aJornada)
+    .map((j) => ({ fecha: j.fecha, comunidad: j.comunidad, estado: j.estado, equipo: j.equipo }));
+
+  return { ahora: Date.now(), pacientes, seguimiento, patologia, bitacora, jornadas };
+}
+
+const PreguntaAsistente = z.object({
+  pregunta: z.string().trim().min(1).max(500),
+  comunidad: z.string().trim().max(80).optional(),
+  autor: z.string().trim().max(80).optional(),
+});
+app.post('/asistente', async (c) => {
+  const body = PreguntaAsistente.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: body.error.issues }, 400);
+  const { pregunta, comunidad, autor } = body.data;
+  const a = armar(pregunta, await fuenteAsistente(), comunidad || undefined);
+  const r = await llamarModelo(ASISTENTE_BIN, { pregunta, contexto: a.contexto });
+  let respuesta = a.sinModelo, motor: 'apple' | 'sin-modelo' = 'sin-modelo', motivo: string | undefined;
+  if (r.ok) {
+    const rev = revisar(r.respuesta, a.contexto);
+    if (rev.ok) { respuesta = r.respuesta; motor = 'apple'; }
+    else { motivo = `el modelo escribió un dato que no estaba en las cifras (${rev.motivo})`; console.warn('[asistente] descartada:', rev.motivo); }
+  } else {
+    motivo = r.codigo === 3 || r.error === 'sin binario' ? 'sin Apple Intelligence en este servidor'
+      : r.codigo === 4 ? 'el modelo no quiso responder' : r.error === 'tiempo agotado' ? 'el modelo tardó más de 45 s' : `el modelo falló (${r.error})`;
+  }
+  // Bitácora: quién consultó. Nunca la pregunta ni la respuesta.
+  if (process.env.ASISTENTE_BITACORA !== '0') await bitacora({ tipo: 'consulta-asistente', autor: autor || 'coordinacion' });
+  return c.json({ respuesta, motor, ...(motivo ? { motivo } : {}), ms: r.ms, datosUsados: a.datos });
+});
+
 export async function cerrar() {
   await suscriptor?.quit();
   suscriptor = null;
@@ -1032,6 +1112,11 @@ raiz.use('/panel/*', serveStatic({ root: PANEL_DIR, rewriteRequestPath: (p) => p
 if (process.env.NODE_ENV !== 'test') {
   cifradoActivo(); // carga la llave al arrancar: avisa en el log si falta CLAVE_DATOS
   preparar().then((m) => console.log(`[busqueda] motor: ${m}`)).catch((e) => console.error('[preparar]', e));
-  serve({ fetch: raiz.fetch, port: Number(process.env.PORT ?? 8787), hostname: '0.0.0.0' }, (i) => console.log(`API en http://localhost:${i.port}/api · panel en /panel`));
+  // Precalienta el modelo de Apple en segundo plano: la primera respuesta en frío tarda ~20–30 s.
+  if (existsSync(ASISTENTE_BIN)) {
+    llamarModelo(ASISTENTE_BIN, { calentar: true }, 60_000)
+      .then((r) => console.log(r.ok ? `[asistente] modelo de Apple listo (${r.ms} ms)` : `[asistente] sin modelo: ${r.error}`));
+  } else console.log(`[asistente] sin binario en ${ASISTENTE_BIN}: responde con cifras directas`);
+  serve({ fetch: raiz.fetch, port: Number(process.env.PORT ?? 8787), hostname: '::' }, (i) => console.log(`API en http://localhost:${i.port}/api · panel en /panel`));
 }
 export default raiz;
