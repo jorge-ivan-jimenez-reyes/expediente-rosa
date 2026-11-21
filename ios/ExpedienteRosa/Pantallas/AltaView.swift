@@ -21,93 +21,135 @@ struct AltaView: View {
     @State private var hayFirma = false
     @State private var guardada = false
     @State private var error: String?
+    @State private var avisos = 0
 
-    private var listo: Bool {
-        !nombre.limpio.isEmpty && !paterno.limpio.isEmpty && !comunidad.limpio.isEmpty && hayFirma
+    private var faltan: [String] {
+        var f: [String] = []
+        if nombre.limpio.isEmpty { f.append("nombre") }
+        if paterno.limpio.isEmpty { f.append("apellido paterno") }
+        if comunidad.limpio.isEmpty { f.append("comunidad") }
+        if !hayFirma { f.append("firma") }
+        return f
     }
+    private var listo: Bool { faltan.isEmpty }
 
     var body: some View {
         NavigationStack {
+          ScrollViewReader { lector in
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: Tema.Espacio.l) {
                     Tarjeta {
-                        Text("Datos mínimos").font(.headline)
-                        CampoTexto(titulo: "Nombre(s)", texto: $nombre)
-                        HStack(spacing: 10) {
+                        CampoTexto(titulo: "Nombre", texto: $nombre)
+                        Renglon {
                             CampoTexto(titulo: "Apellido paterno", texto: $paterno)
                             CampoTexto(titulo: "Apellido materno", texto: $materno)
                         }
-                        HStack(spacing: 10) {
+                        Renglon {
                             CampoTexto(titulo: "Comunidad", texto: $comunidad)
                             CampoTexto(titulo: "Municipio", texto: $municipio)
                         }
                         Toggle("Sabe su fecha de nacimiento", isOn: $sabeFecha.animation(Tema.resorte))
-                            .tint(Tema.rosa)
+                            .font(.cuerpo)
+                            .tint(Tema.rosaRelleno)
+                            .frame(minHeight: Tema.toque)
                         if sabeFecha {
                             DatePicker("Nacimiento", selection: $nacimiento, in: ...Date.now, displayedComponents: .date)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .font(.cuerpo)
+                                .frame(minHeight: Tema.toque)
                         } else {
                             Stepper("Edad: \(edad) años", value: $edad, in: 12...110)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .font(.cuerpo)
+                                .frame(minHeight: Tema.toque)
                         }
-                        Text("No pedimos dirección, teléfono ni CURP.")
-                            .font(.caption).foregroundStyle(.secondary)
                     }
+                    .id("datos")
 
                     Tarjeta {
-                        Label("Consentimiento", systemImage: "hand.raised.square")
-                            .font(.headline).foregroundStyle(Tema.rosaProfundo)
+                        Text("Consentimiento").font(.seccion)
                         Text(Consentimiento.texto)
-                            .font(.callout)
+                            .font(.cuerpo)
                             .foregroundStyle(.secondary)
-                        ZStack(alignment: .bottomLeading) {
-                            LienzoFirma(lienzo: $lienzo, hayFirma: $hayFirma)
-                                .frame(height: 150)
-                                .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 14))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .strokeBorder(hayFirma ? Tema.rosa : .secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: hayFirma ? [] : [6]))
-                                }
-                            if !hayFirma {
-                                Text("Firma de la paciente").font(.caption).foregroundStyle(.tertiary).padding(12)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-                        .animation(Tema.resorte, value: hayFirma)
-                        if hayFirma {
-                            Button("Borrar firma", systemImage: "arrow.uturn.backward") {
-                                lienzo.drawing = PKDrawing(); hayFirma = false
-                            }
-                            .font(.footnote).tint(.secondary)
-                        }
+                        firma
                     }
+                    .id("firma")
 
                     if let error {
-                        Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(Tema.rojo).font(.footnote)
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.nota).foregroundStyle(Tema.rojo)
                     }
                 }
-                .padding(16)
+                .padding(Tema.Espacio.l)
             }
-            .background(Color(.systemGroupedBackground))
+            .scrollDismissesKeyboard(.interactively)
+            .background(Tema.fondo)
             .navigationTitle("Nueva paciente")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { cerrar() } }
             }
             .safeAreaInset(edge: .bottom) {
-                Button(action: guardar) {
-                    Label(listo ? "Guardar en el teléfono" : "Faltan datos o firma", systemImage: "checkmark.seal.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                // Mientras falte algo, el botón dice qué y al tocarlo lleva ahí (la firma queda
+                // abajo del pliegue). Sin firma nunca se guarda: `guardar()` solo corre si `listo`.
+                Group {
+                    if listo {
+                        BotonPrincipal(titulo: "Guardar", icono: "checkmark", accion: guardar)
+                    } else {
+                        Button { irAFalta(lector) } label: {
+                            Label("Falta: \(faltan.joined(separator: ", "))", systemImage: faltan == ["firma"] ? "signature" : "arrow.down")
+                                .font(.seccion)
+                                .frame(maxWidth: .infinity, minHeight: Tema.toque)
+                        }
+                        .buttonStyle(.glass)
+                        .tint(Tema.rosa)
+                    }
                 }
-                .buttonStyle(.glassProminent)
-                .tint(Tema.rosa)
-                .disabled(!listo)
-                .padding(.horizontal, 16).padding(.bottom, 8)
+                .padding(.horizontal, Tema.Espacio.l).padding(.bottom, Tema.Espacio.s)
+                .animation(Tema.resorte, value: faltan)
+                .sensoryFeedback(.warning, trigger: avisos)
             }
             .overlay { if guardada { Guardada() } }
             .sensoryFeedback(.success, trigger: guardada)
+          }
         }
         .onAppear(perform: precargar)
+    }
+
+    private var firma: some View {
+        VStack(alignment: .trailing, spacing: Tema.Espacio.s) {
+            ZStack(alignment: .bottomLeading) {
+                LienzoFirma(lienzo: $lienzo, hayFirma: $hayFirma)
+                    .frame(height: 160)
+                    .background(Tema.campo, in: .rect(cornerRadius: Tema.Radio.campo))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Tema.Radio.campo)
+                            .strokeBorder(hayFirma ? Tema.rosa : Color.secondary.opacity(0.5),
+                                          style: StrokeStyle(lineWidth: 1.5, dash: hayFirma ? [] : [6]))
+                    }
+                if !hayFirma {
+                    Text("Firma de la paciente")
+                        .font(.nota).foregroundStyle(.secondary)
+                        .padding(Tema.Espacio.m)
+                        .allowsHitTesting(false)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(hayFirma ? "Firma capturada" : "Espacio para la firma de la paciente")
+            if hayFirma {
+                Button("Borrar firma", systemImage: "arrow.uturn.backward") {
+                    lienzo.drawing = PKDrawing(); hayFirma = false
+                }
+                .font(.nota)
+                .frame(minHeight: Tema.toque)
+                .tint(Tema.rosa)
+            }
+        }
+        .animation(Tema.resorte, value: hayFirma)
+    }
+
+    private func irAFalta(_ lector: ScrollViewProxy) {
+        avisos += 1
+        let destino = faltan.contains("firma") && faltan.count == 1 ? "firma" : "datos"
+        withAnimation(Tema.resorte) { lector.scrollTo(destino, anchor: destino == "firma" ? .bottom : .top) }
     }
 
     private func precargar() {
@@ -118,6 +160,7 @@ struct AltaView: View {
     }
 
     private func guardar() {
+        guard listo else { return }
         let p = NuevaPaciente(
             nombre: nombre.limpio, apellidoPaterno: paterno.limpio, apellidoMaterno: materno.limpio.nilSiVacio,
             nacimiento: sabeFecha ? FechasIA.texto(nacimiento) : nil, edad: sabeFecha ? nil : edad,
@@ -150,7 +193,7 @@ struct LienzoFirma: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         lienzo.drawingPolicy = .anyInput
-        lienzo.tool = PKInkingTool(.pen, color: UIColor(Tema.rosaProfundo), width: 3)
+        lienzo.tool = PKInkingTool(.pen, color: .label, width: 3)
         lienzo.backgroundColor = .clear
         lienzo.delegate = context.coordinator
         return lienzo
@@ -168,20 +211,20 @@ struct LienzoFirma: UIViewRepresentable {
     }
 }
 
-/// Confirmación al guardar: el sello aparece con un pequeño rebote.
+/// Confirmación al guardar. Es un logro: aquí sí hay rebote.
 struct Guardada: View {
     @State private var aparece = false
     var body: some View {
         ZStack {
-            Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
-            VStack(spacing: 12) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(Tema.degradado)
+            Rectangle().fill(.regularMaterial).ignoresSafeArea()
+            VStack(spacing: Tema.Espacio.m) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(Tema.verde)
                     .symbolEffect(.bounce, value: aparece)
-                    .scaleEffect(aparece ? 1 : 0.5)
-                Text("Guardada en el teléfono").font(.title3.weight(.semibold))
-                Text("Se sincroniza cuando haya señal").font(.subheadline).foregroundStyle(.secondary)
+                    .scaleEffect(aparece ? 1 : 0.6)
+                Text("Guardada").font(.titulo)
+                Text("Se manda cuando haya señal").font(.cuerpo).foregroundStyle(.secondary)
             }
         }
         .transition(.opacity)

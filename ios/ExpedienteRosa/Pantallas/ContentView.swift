@@ -5,13 +5,35 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var contexto
     @State private var sync: Sincronizador?
+    @State private var arrancando = true
 
     var body: some View {
+        // ZStack a pantalla completa: mientras se crea el sincronizador, `principal` es un
+        // ProgressView chico y un overlay tomaría su tamaño.
+        ZStack {
+            principal.frame(maxWidth: .infinity, maxHeight: .infinity)
+            if arrancando { Arranque { arrancando = false } }
+        }
+    }
+
+    @ViewBuilder private var principal: some View {
+        #if DEBUG
+        if ModoCaptura.pantalla != nil {
+            RaizCaptura()
+        } else {
+            raiz
+        }
+        #else
+        raiz
+        #endif
+    }
+
+    private var raiz: some View {
         Group {
             if let sync {
                 Pestanas().environment(sync)
             } else {
-                ProgressView().tint(Tema.rosa)
+                ProgressView()
             }
         }
         .task {
@@ -24,17 +46,18 @@ struct ContentView: View {
 struct Pestanas: View {
     @AppStorage("rol") private var rol: Rol = .enfermeria
     @Environment(Sincronizador.self) private var sync
+    @State var pestana = "buscar"
 
     var body: some View {
-        TabView {
-            Tab("Buscar", systemImage: "magnifyingglass") {
+        TabView(selection: $pestana) {
+            Tab("Buscar", systemImage: "magnifyingglass", value: "buscar") {
                 BuscarView()
             }
-            Tab("Jornada", systemImage: "antenna.radiowaves.left.and.right") {
+            Tab("Jornada", systemImage: "antenna.radiowaves.left.and.right", value: "jornada") {
                 JornadaView()
             }
             .badge(sync.pendientes)
-            Tab("Revisión", systemImage: "person.2.badge.gearshape") {
+            Tab("Revisión", systemImage: "person.2.badge.gearshape", value: "revision") {
                 RevisionView()
             }
         }
@@ -48,15 +71,21 @@ struct SelectorRol: View {
     @AppStorage("rol") private var rol: Rol = .enfermeria
     var body: some View {
         Menu {
-            Picker("¿Quién usa el teléfono?", selection: $rol) {
+            Picker("Quién usa el teléfono", selection: $rol) {
                 ForEach(Rol.allCases) { r in
                     Label(r.nombre, systemImage: r.icono).tag(r)
                 }
             }
         } label: {
-            Label(rol.nombre, systemImage: rol.icono)
-                .font(.subheadline.weight(.semibold))
+            HStack(spacing: Tema.Espacio.xs) {
+                Text(rol.nombre)
+                Image(systemName: "chevron.down").imageScale(.small)
+            }
+            .font(.nota.weight(.semibold))
+            .padding(.horizontal, Tema.Espacio.xs)
+            .frame(minHeight: Tema.toque)
         }
+        .accessibilityLabel("Rol: \(rol.nombre)")
         .sensoryFeedback(.selection, trigger: rol)
     }
 }

@@ -12,12 +12,12 @@ struct RevisionView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: Tema.Espacio.l) {
                     if pares.isEmpty && !cargando {
                         ContentUnavailableView {
-                            Label(error == nil ? "Sin duplicados por revisar" : "No se pudo consultar", systemImage: error == nil ? "checkmark.circle" : "wifi.exclamationmark")
+                            Label(error == nil ? "Nada por revisar" : "Sin conexión", systemImage: error == nil ? "checkmark.circle" : "wifi.exclamationmark")
                         } description: {
-                            Text(error ?? "Cuando dos teléfonos registren a la misma paciente, aparece aquí.")
+                            Text(error ?? "Aquí aparecen las pacientes que dos teléfonos registraron por separado.")
                         }
                         .padding(.top, 40)
                     }
@@ -26,10 +26,10 @@ struct RevisionView: View {
                             .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading).combined(with: .opacity)))
                     }
                 }
-                .padding(16)
+                .padding(Tema.Espacio.l)
                 .animation(Tema.resorte, value: pares.map(\.id))
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Tema.fondo)
             .navigationTitle("Revisión")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SelectorRol() }
@@ -46,6 +46,9 @@ struct RevisionView: View {
     }
 
     private func cargar() async {
+        #if DEBUG
+        if let demo = ModoCaptura.paresDemo { pares = demo; return }
+        #endif
         cargando = true; error = nil
         do { pares = try await sync.api.duplicados() } catch { self.error = error.localizedDescription; pares = [] }
         cargando = false
@@ -53,7 +56,11 @@ struct RevisionView: View {
 
     private func resolver(_ par: ParDuplicado, unir: Bool) async {
         do {
+            #if DEBUG
+            if ModoCaptura.paresDemo == nil { try await sync.api.resolver(par, unir: unir) }
+            #else
             try await sync.api.resolver(par, unir: unir)
+            #endif
             withAnimation(Tema.resorte) { pares.removeAll { $0.id == par.id } }
             resueltos += 1
         } catch {
@@ -68,52 +75,59 @@ struct TarjetaPar: View {
 
     var body: some View {
         Tarjeta {
-            HStack {
+            HStack(alignment: .top, spacing: Tema.Espacio.m) {
                 AnilloPuntaje(puntaje: par.puntaje)
-                VStack(alignment: .leading) {
-                    Text("¿Es la misma persona?").font(.headline)
-                    Text(par.razones).font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+                    Text("¿Es la misma persona?").font(.seccion)
+                    Text(par.razones.capitalizandoPrimera).font(.nota).foregroundStyle(.secondary)
                 }
             }
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: Tema.Espacio.m) {
                 ficha(par.a, contra: par.b)
+                Rectangle().fill(Tema.linea).frame(width: 1)
                 ficha(par.b, contra: par.a)
             }
-            HStack(spacing: 10) {
+            .padding(.vertical, Tema.Espacio.xs)
+            Renglon {
                 Button { decidir(false) } label: {
-                    Label("Son distintas", systemImage: "person.2").frame(maxWidth: .infinity)
+                    Text("Son distintas").font(.seccion).frame(maxWidth: .infinity, minHeight: Tema.toque)
                 }
                 .buttonStyle(.glass)
+                .tint(Tema.rosa)
                 Button { decidir(true) } label: {
-                    Label("Unir", systemImage: "arrow.triangle.merge").frame(maxWidth: .infinity)
+                    Text("Unir").font(.seccion).frame(maxWidth: .infinity, minHeight: Tema.toque)
                 }
-                .buttonStyle(.glassProminent).tint(Tema.rosa)
+                .buttonStyle(.glassProminent)
+                .tint(Tema.rosaRelleno)
             }
         }
     }
 
-    /// Ficha de una paciente; lo que difiere de la otra se resalta en rosa.
+    /// Ficha de una paciente; lo que difiere de la otra va en rosa y negritas.
     private func ficha(_ p: PacienteDTO?, contra o: PacienteDTO?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
             if let p {
                 campo(p.nombre, o?.nombre)
                 campo(p.apellidoPaterno, o?.apellidoPaterno)
                 campo(p.apellidoMaterno ?? "—", o?.apellidoMaterno ?? "—")
-                campo(p.nacimiento ?? p.edad.map { "\($0) años" } ?? "—", o?.nacimiento ?? o?.edad.map { "\($0) años" } ?? "—")
+                campo(Self.edad(p), o.map(Self.edad))
                 campo(p.comunidad, o?.comunidad)
-                Text(p.folio).font(.caption2.monospaced()).foregroundStyle(.tertiary)
+                Text(p.folio).font(.nota.monospaced()).foregroundStyle(.secondary).padding(.top, Tema.Espacio.xs)
             }
         }
-        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 14))
+    }
+
+    private static func edad(_ p: PacienteDTO) -> String {
+        if let n = p.nacimiento, let f = FechasIA.fecha(n) { return f.formatted(.dateTime.day().month(.abbreviated).year()) }
+        return p.edad.map { "\($0) años" } ?? "—"
     }
 
     private func campo(_ valor: String, _ otro: String?) -> some View {
         let distinto = valor.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
             != (otro ?? "").folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
         return Text(valor)
-            .font(.subheadline.weight(distinto ? .semibold : .regular))
-            .foregroundStyle(distinto ? Tema.rosaProfundo : .primary)
+            .font(.cuerpo.weight(distinto ? .semibold : .regular))
+            .foregroundStyle(distinto ? Tema.rosa : .primary)
     }
 }

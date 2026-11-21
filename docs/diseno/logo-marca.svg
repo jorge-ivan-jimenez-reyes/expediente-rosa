@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="200 232 624 560" width="624" height="560">
+  <title>Expediente Rosa (marca sola, para el arranque)</title>
+  <path d="M256 232 H420 Q444 232 458 252 L490 300 H768 Q824 300 824 356 V600 H200 V288 Q200 232 256 232 Z" fill="#FFFFFF" fill-opacity="0.5"/>
+  <rect x="200" y="352" width="624" height="440" rx="56" fill="#FFFFFF"/>
+  <circle cx="512" cy="514" r="76" fill="#C4006A"/>
+  <path d="M376 724 C376 646 438 608 512 608 C586 608 648 646 648 724 Z" fill="#C4006A"/>
+</svg>

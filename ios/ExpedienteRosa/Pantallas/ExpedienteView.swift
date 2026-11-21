@@ -21,29 +21,28 @@ struct ExpedienteView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: Tema.Espacio.l) {
                 encabezado
                 if veResultados && !estudios.isEmpty && (resumen != nil || resumiendo) {
-                    Tarjeta {
-                        Text("Resumen para el médico").font(.subheadline.weight(.semibold))
-                        LineaIA(texto: resumen, cargando: resumiendo)
+                    Tarjeta(espacio: Tema.Espacio.s) {
+                        Text("Resumen").font(.seccion)
+                        LineaIA(texto: resumen, cargando: resumiendo, esperando: "Resumiendo…")
                     }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
                 }
                 historial
             }
-            .padding(16)
+            .padding(Tema.Espacio.l)
             .animation(Tema.resorte, value: estudios.map(\.id))
             .animation(Tema.resorte, value: resumen)
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle(paciente.nombre)
+        .background(Tema.fondo)
+        .navigationTitle("Expediente")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
+        .safeAreaInset(edge: .bottom) {
             if rol == .medico {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { agregar = true } label: { Label("Agregar estudio", systemImage: "plus") }
-                }
+                BotonPrincipal(titulo: "Agregar estudio", icono: "plus") { agregar = true }
+                    .padding(.horizontal, Tema.Espacio.l).padding(.bottom, Tema.Espacio.s)
             }
         }
         .sheet(isPresented: $agregar) { AgregarEstudioView(paciente: paciente) }
@@ -51,51 +50,37 @@ struct ExpedienteView: View {
     }
 
     private var encabezado: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(paciente.nombreCompleto).font(.title2.weight(.bold))
-                    Text(paciente.subtitulo).font(.subheadline).opacity(0.9)
-                }
-                Spacer()
-                Text(paciente.folio)
-                    .font(.caption.monospaced().weight(.semibold))
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-                    .glassEffect(.regular, in: .capsule)
+        VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+            Text(paciente.nombreCompleto).font(.titulo)
+            Text(paciente.subtitulo).font(.cuerpo).foregroundStyle(.secondary)
+            HStack(spacing: Tema.Espacio.s) {
+                Text(paciente.folio).monospaced()
+                Text("·")
+                Text("Firmó el \(paciente.consentimiento.formatted(.dateTime.day().month(.abbreviated).year()))")
             }
-            HStack(spacing: 18) {
-                dato("\(estudios.count)", "estudios")
-                dato(estudios.first.map { $0.fecha.formatted(.dateTime.month(.abbreviated).year()) } ?? "—", "último")
-                dato(paciente.consentimiento.formatted(.dateTime.day().month(.abbreviated)), "consintió")
-            }
+            .font(.nota).foregroundStyle(.secondary)
+            .padding(.top, Tema.Espacio.xs)
         }
-        .foregroundStyle(.white)
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Tema.degradado, in: .rect(cornerRadius: 24))
-        .shadow(color: Tema.rosa.opacity(0.3), radius: 16, y: 8)
-    }
-
-    private func dato(_ valor: String, _ etiqueta: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(valor).font(.headline).contentTransition(.numericText())
-            Text(etiqueta).font(.caption).opacity(0.8)
-        }
+        .padding(.top, Tema.Espacio.s)
     }
 
     @ViewBuilder private var historial: some View {
-        if estudios.isEmpty {
-            Tarjeta {
-                Label("Primera visita: sin estudios previos", systemImage: "sparkles")
-                    .foregroundStyle(.secondary)
+        Tarjeta(espacio: Tema.Espacio.l) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Estudios").font(.seccion)
+                Spacer()
+                if !veResultados && !estudios.isEmpty {
+                    Label("Resultados: solo médico", systemImage: "lock.fill")
+                        .font(.nota).foregroundStyle(.secondary)
+                }
             }
-        } else {
-            Tarjeta {
-                Text("Historial").font(.headline)
+            if estudios.isEmpty {
+                Text("Primera visita").font(.cuerpo).foregroundStyle(.secondary)
+            } else {
                 VStack(spacing: 0) {
                     ForEach(Array(estudios.enumerated()), id: \.element.id) { i, e in
                         FilaEstudio(estudio: e, veResultado: veResultados, ultima: i == estudios.count - 1)
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.opacity)
                     }
                 }
             }
@@ -117,37 +102,37 @@ struct FilaEstudio: View {
     var veResultado: Bool
     var ultima: Bool
 
+    private var colorPunto: Color { veResultado ? Tema.color(estudio.resultado) : Color.secondary }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Tema.Espacio.m) {
             VStack(spacing: 0) {
                 Image(systemName: Tema.icono(estudio.tipo))
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 30, height: 30)
-                    .background(veResultado ? Tema.color(estudio.resultado) : Tema.rosa, in: .circle)
+                    .font(.nota.weight(.semibold))
+                    .foregroundStyle(colorPunto)
+                    .frame(width: 32, height: 32)
+                    .background(colorPunto.opacity(0.14), in: .circle)
                 if !ultima {
-                    Rectangle().fill(Color(.separator)).frame(width: 2).frame(maxHeight: .infinity)
+                    Rectangle().fill(Tema.linea).frame(width: 1).frame(maxHeight: .infinity)
                 }
             }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(estudio.tipo.nombre).font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(estudio.tipo.nombre).font(.seccion)
                     Spacer()
                     Text(estudio.fecha.formatted(.dateTime.day().month(.abbreviated).year()))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.nota).foregroundStyle(.secondary)
                 }
                 if veResultado {
-                    Chip(texto: estudio.resultado.nombre,
-                         icono: estudio.resultado == .anormal ? "exclamationmark.triangle.fill" : nil,
+                    Chip(texto: estudio.resultado.nombre, icono: Tema.icono(estudio.resultado),
                          color: Tema.color(estudio.resultado))
-                    if let nota = estudio.nota { Text(nota).font(.footnote).foregroundStyle(.secondary) }
-                } else {
-                    Label("Resultado visible solo para el médico", systemImage: "lock.fill")
-                        .font(.caption).foregroundStyle(.tertiary)
+                    if let nota = estudio.nota { Text(nota).font(.nota).foregroundStyle(.secondary) }
                 }
             }
-            .padding(.bottom, ultima ? 0 : 16)
+            .padding(.top, Tema.Espacio.xs)
+            .padding(.bottom, ultima ? 0 : Tema.Espacio.l)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -168,12 +153,12 @@ struct AgregarEstudioView: View {
             Form {
                 if Inteligencia.disponible {
                     Section {
-                        TextField("Ej. «mastografía normal, regresa en un año»", text: $dictado, axis: .vertical)
+                        TextField("mastografía normal, regresa en un año", text: $dictado, axis: .vertical)
                         Button {
                             Task { await interpretar() }
                         } label: {
                             HStack {
-                                Label("Llenar con IA del teléfono", systemImage: "apple.intelligence")
+                                Label("Llenar con IA", systemImage: "apple.intelligence")
                                 if interpretando { Spacer(); ProgressView() }
                             }
                         }
@@ -181,28 +166,27 @@ struct AgregarEstudioView: View {
                     } header: {
                         Text("Dictar")
                     } footer: {
-                        Text("Usa el micrófono del teclado. Se procesa en el teléfono, sin internet.")
+                        Text("Usa el micrófono del teclado. No necesita internet.")
                     }
                 }
                 Section("Estudio") {
                     Picker("Tipo", selection: $tipo) {
-                        ForEach(TipoEstudio.allCases, id: \.self) { Label($0.nombre, systemImage: Tema.icono($0)).tag($0) }
+                        ForEach(TipoEstudio.allCases, id: \.self) { Text($0.nombre).tag($0) }
                     }
                     Picker("Resultado", selection: $resultado) {
                         ForEach(Resultado.allCases, id: \.self) { Text($0.nombre).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    TextField("Nota (opcional)", text: $nota, axis: .vertical)
+                    TextField("Nota", text: $nota, axis: .vertical)
                 }
             }
             .navigationTitle("Estudio de hoy")
             .navigationBarTitleDisplayMode(.inline)
+            .tint(Tema.rosa)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { cerrar() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Guardar", action: guardar).tint(Tema.rosa) }
+                ToolbarItem(placement: .confirmationAction) { Button("Guardar", action: guardar) }
             }
-            .animation(Tema.resorte, value: tipo)
-            .animation(Tema.resorte, value: resultado)
             .sensoryFeedback(.success, trigger: guardado)
         }
         .presentationDetents([.medium, .large])

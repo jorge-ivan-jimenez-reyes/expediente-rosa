@@ -16,108 +16,131 @@ struct EscanearView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: Tema.Espacio.l) {
                     selector
+                    if let hoja { resultado(hoja) }
                     if let imagen {
                         Image(uiImage: imagen)
                             .resizable().scaledToFit()
-                            .clipShape(.rect(cornerRadius: 18))
+                            .frame(maxWidth: .infinity, maxHeight: 320)
+                            .clipShape(.rect(cornerRadius: Tema.Radio.campo))
                             .overlay { if leyendo { Barrido() } }
-                            .shadow(color: .black.opacity(0.1), radius: 10, y: 4)
-                            .transition(.scale(scale: 0.95).combined(with: .opacity))
+                            .accessibilityLabel("Foto de la hoja")
+                            .transition(.opacity)
                     }
-                    if let hoja { resultado(hoja) }
-                    if let error { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(Tema.rojo) }
+                    if let hoja { textoLeido(hoja) }
+                    if let error {
+                        Label(error, systemImage: "exclamationmark.triangle.fill").font(.nota).foregroundStyle(Tema.rojo)
+                    }
                 }
-                .padding(16)
+                .padding(Tema.Espacio.l)
                 .animation(Tema.resorte, value: hoja)
                 .animation(Tema.resorte, value: imagen)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Tema.fondo)
             .navigationTitle("Escanear hoja")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cerrar") { cerrar() } } }
+            .safeAreaInset(edge: .bottom) {
+                if let p = hoja?.paciente {
+                    BotonPrincipal(titulo: "Dar de alta", icono: "person.badge.plus") { alConfirmar(p) }
+                        .padding(.horizontal, Tema.Espacio.l).padding(.bottom, Tema.Espacio.s)
+                }
+            }
             .onChange(of: foto) { _, nueva in Task { await cargar(nueva) } }
-            .onAppear { Inteligencia.precalentar() }
+            .onAppear {
+                Inteligencia.precalentar()
+                #if DEBUG
+                if let (img, h) = ModoCaptura.hojaDemo { imagen = img; hoja = h }
+                #endif
+            }
         }
     }
 
     private var selector: some View {
-        Tarjeta {
-            Text("Toma o elige la foto de una hoja de registro").font(.headline)
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Tema.Espacio.s) {
+            Renglon {
                 PhotosPicker(selection: $foto, matching: .images) {
-                    Label("Elegir foto", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity)
+                    Label("Elegir foto", systemImage: "photo").frame(maxWidth: .infinity, minHeight: Tema.toque)
                 }
-                .buttonStyle(.glassProminent).tint(Tema.rosa)
+                .buttonStyle(.glass)
                 Menu {
                     ForEach(1...3, id: \.self) { i in
-                        Button("Hoja de ejemplo \(i)") { usarEjemplo(i) }
+                        Button("Hoja \(i)") { usarEjemplo(i) }
                     }
                 } label: {
-                    Label("Ejemplo", systemImage: "doc.text").frame(maxWidth: .infinity)
+                    Label("Usar ejemplo", systemImage: "doc.text").frame(maxWidth: .infinity, minHeight: Tema.toque)
                 }
                 .buttonStyle(.glass)
             }
+            .tint(Tema.rosa)
+            .font(.seccion)
             if !Inteligencia.disponible {
-                Text("Sin Apple Intelligence: se muestra el texto leído y tú llenas los campos.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text("Este teléfono no tiene IA: llena los datos a mano con el texto leído.")
+                    .font(.nota).foregroundStyle(.secondary)
             }
         }
     }
 
-    private func resultado(_ h: HojaLeida) -> some View {
-        VStack(spacing: 16) {
-            if let p = h.paciente {
-                Tarjeta {
-                    Label("Leído en el teléfono, revisa antes de guardar", systemImage: "apple.intelligence")
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(Tema.rosaProfundo)
+    @ViewBuilder private func resultado(_ h: HojaLeida) -> some View {
+        if let p = h.paciente {
+            Tarjeta {
+                Label("Revisa lo leído", systemImage: "apple.intelligence")
+                    .font(.seccion)
+                    .labelStyle(EtiquetaIA())
+                VStack(alignment: .leading, spacing: Tema.Espacio.s) {
                     fila("Nombre", [p.nombre, p.apellidoPaterno, p.apellidoMaterno].compactMap { $0 }.joined(separator: " "))
-                    fila("Nacimiento / edad", p.nacimiento ?? p.edad.map { "\($0) años" } ?? "—")
-                    fila("Comunidad", [p.comunidad, p.municipio].compactMap { $0 }.joined(separator: ", "))
-                    if !h.estudios.isEmpty {
-                        Divider()
-                        ForEach(Array(h.estudios.enumerated()), id: \.offset) { _, e in
-                            HStack {
-                                Image(systemName: Tema.icono(e.tipo)).foregroundStyle(Tema.rosa)
-                                Text(e.tipo.nombre)
-                                Spacer()
-                                Chip(texto: e.resultado.nombre, color: Tema.color(e.resultado))
-                            }
-                            .font(.subheadline)
+                    fila("Nacimiento", p.nacimiento.flatMap(FechasIA.fecha).map { $0.formatted(.dateTime.day().month(.abbreviated).year()) }
+                         ?? p.edad.map { "\($0) años" } ?? "—")
+                    fila("Comunidad", p.comunidad.isEmpty ? "—" : p.comunidad)
+                }
+                if !h.estudios.isEmpty {
+                    Divider()
+                    ForEach(Array(h.estudios.enumerated()), id: \.offset) { _, e in
+                        HStack {
+                            Text(e.tipo.nombre).font(.cuerpo)
+                            Spacer()
+                            Chip(texto: e.resultado.nombre, icono: Tema.icono(e.resultado), color: Tema.color(e.resultado))
                         }
                     }
-                    Button {
-                        alConfirmar(p)
-                    } label: {
-                        Label("Usar estos datos para el alta", systemImage: "person.badge.plus").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glassProminent).tint(Tema.rosa)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            Tarjeta {
-                DisclosureGroup("Texto leído de la hoja") {
-                    Text(h.textoCrudo.isEmpty ? "(no se leyó texto)" : h.textoCrudo)
-                        .font(.footnote.monospaced())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-                .tint(Tema.rosa)
+            .transition(.opacity)
+        }
+    }
+
+    private func textoLeido(_ h: HojaLeida) -> some View {
+        Tarjeta {
+            DisclosureGroup {
+                Text(h.textoCrudo.isEmpty ? "No se leyó texto." : h.textoCrudo)
+                    .font(.nota.monospaced())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(.top, Tema.Espacio.s)
+            } label: {
+                Text("Texto de la hoja").font(.cuerpo).foregroundStyle(.primary)
             }
+            .tint(Tema.rosa)
+            .frame(minHeight: Tema.toque)
         }
     }
 
     private func fila(_ etiqueta: String, _ valor: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(etiqueta).font(.caption).foregroundStyle(.secondary).frame(width: 120, alignment: .leading)
-            Text(valor).font(.subheadline.weight(.medium))
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: Tema.Espacio.m) {
+                Text(etiqueta).font(.nota).foregroundStyle(.secondary).frame(width: 96, alignment: .leading)
+                Text(valor).font(.cuerpo)
+            }
+            VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+                Text(etiqueta).font(.nota).foregroundStyle(.secondary)
+                Text(valor).font(.cuerpo)
+            }
         }
     }
 
     private func usarEjemplo(_ i: Int) {
         guard let url = Bundle.main.url(forResource: "hoja\(i)", withExtension: "png"),
-              let img = UIImage(contentsOfFile: url.path) else { error = "No encontré la hoja de ejemplo."; return }
+              let img = UIImage(contentsOfFile: url.path) else { error = "No se encontró la hoja de ejemplo."; return }
         Task { await leer(img) }
     }
 
@@ -135,17 +158,33 @@ struct EscanearView: View {
     }
 }
 
-/// Barra que recorre la hoja mientras se lee.
+/// Ícono de IA en rosa, texto en color normal.
+struct EtiquetaIA: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: Tema.Espacio.s) {
+            configuration.icon.foregroundStyle(Tema.rosa)
+            configuration.title
+        }
+    }
+}
+
+/// Barra que recorre la hoja mientras se lee. Con «Reducir movimiento» solo parpadea suave.
 struct Barrido: View {
+    @Environment(\.accessibilityReduceMotion) private var sinMovimiento
     @State private var arriba = true
     var body: some View {
         GeometryReader { g in
-            LinearGradient(colors: [.clear, Tema.rosa.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 80)
-                .offset(y: arriba ? -80 : g.size.height)
-                .onAppear { withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { arriba = false } }
+            if sinMovimiento {
+                Tema.rosa.opacity(arriba ? 0.08 : 0.2)
+                    .onAppear { withAnimation(.easeInOut(duration: 1).repeatForever()) { arriba = false } }
+            } else {
+                Rectangle().fill(Tema.rosa.opacity(0.25))
+                    .frame(height: 3)
+                    .offset(y: arriba ? 0 : g.size.height - 3)
+                    .onAppear { withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { arriba = false } }
+            }
         }
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: Tema.Radio.campo))
         .allowsHitTesting(false)
     }
 }

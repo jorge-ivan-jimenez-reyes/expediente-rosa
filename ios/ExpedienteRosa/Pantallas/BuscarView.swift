@@ -27,20 +27,30 @@ struct BuscarView: View {
     var body: some View {
         NavigationStack(path: $ruta) {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: Tema.Espacio.l) {
                     formulario
                     resultados
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
+                .padding(.horizontal, Tema.Espacio.l)
+                .padding(.bottom, Tema.Espacio.xxl)
                 .animation(Tema.resorte, value: candidatas.map(\.id))
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Buscar paciente")
+            .scrollDismissesKeyboard(.interactively)
+            .background(Tema.fondo)
+            .navigationTitle("Buscar")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SelectorRol() }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { escanear = true } label: { Label("Escanear hoja", systemImage: "doc.viewfinder") }
+                    Button("Escanear") { escanear = true }
+                        .accessibilityHint("Lee una hoja de papel con la cámara")
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if hayConsulta {
+                    botonNueva
+                        .padding(.horizontal, Tema.Espacio.l)
+                        .padding(.bottom, Tema.Espacio.s)
+                        .transition(.opacity)
                 }
             }
             .navigationDestination(for: Paciente.self) { ExpedienteView(paciente: $0) }
@@ -58,78 +68,61 @@ struct BuscarView: View {
                 }
             }
             .task(id: candidatas.first?.id) { await explicarPrimera() }
+            #if DEBUG
+            .onAppear(perform: abrirCaptura)
+            #endif
         }
     }
 
     private var formulario: some View {
         Tarjeta {
-            HStack {
-                Text("¿Ya vino antes?").font(.headline)
-                Spacer()
-                Text("\(pacientes.count) en el teléfono")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .contentTransition(.numericText(value: Double(pacientes.count)))
-            }
-            HStack(spacing: 10) {
-                CampoTexto(titulo: "Nombre(s)", texto: $nombre)
-            }
-            HStack(spacing: 10) {
+            CampoTexto(titulo: "Nombre", texto: $nombre)
+            Renglon {
                 CampoTexto(titulo: "Apellido paterno", texto: $paterno)
                 CampoTexto(titulo: "Apellido materno", texto: $materno)
             }
-            HStack(spacing: 10) {
-                CampoTexto(titulo: "Edad", texto: $edad, teclado: .numberPad).frame(width: 90)
+            Renglon {
+                CampoTexto(titulo: "Edad", texto: $edad, teclado: .numberPad)
                 CampoTexto(titulo: "Comunidad", texto: $comunidad)
             }
         }
-        .padding(.top, 8)
+        .padding(.top, Tema.Espacio.s)
     }
 
     @ViewBuilder private var resultados: some View {
         if hayConsulta {
             if candidatas.isEmpty {
-                Tarjeta {
-                    Label("No hay coincidencias en el teléfono", systemImage: "person.crop.circle.badge.questionmark")
-                        .foregroundStyle(.secondary)
-                    botonNueva
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                Text("Sin coincidencias en el teléfono")
+                    .font(.cuerpo).foregroundStyle(.secondary)
+                    .transition(.opacity)
             } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Posibles coincidencias").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                        .padding(.leading, 4)
-                    ForEach(Array(candidatas.enumerated()), id: \.element.id) { i, c in
-                        FilaCandidata(candidata: c, explicacion: i == 0 ? explicacion : nil, explicando: i == 0 && explicando) {
-                            ruta = [c.paciente]
-                        }
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                ForEach(Array(candidatas.enumerated()), id: \.element.id) { i, c in
+                    FilaCandidata(candidata: c, explicacion: i == 0 ? explicacion : nil, explicando: i == 0 && explicando) {
+                        ruta = [c.paciente]
                     }
-                    botonNueva.padding(.top, 4)
+                    .transition(.opacity)
                 }
             }
         } else {
-            VStack(spacing: 10) {
-                Image(systemName: "person.text.rectangle")
-                    .font(.system(size: 44)).foregroundStyle(Tema.rosa.opacity(0.6))
-                    .symbolEffect(.breathe, options: .repeating)
-                Text("Escribe nombre y apellido para buscar.\nFunciona sin señal.")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 40)
+            Text("\(pacientes.count) pacientes en el teléfono. Se busca sin señal.")
+                .font(.nota).foregroundStyle(.secondary)
+                .contentTransition(.numericText(value: Double(pacientes.count)))
         }
     }
 
-    private var botonNueva: some View {
-        Button {
-            alta = consulta
-        } label: {
-            Label("Es nueva: dar de alta", systemImage: "person.badge.plus")
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+    /// Si hay coincidencias, «Es ella» es lo probable y este botón baja de peso.
+    @ViewBuilder private var botonNueva: some View {
+        if candidatas.isEmpty {
+            BotonPrincipal(titulo: "Es nueva", icono: "person.badge.plus") { alta = consulta }
+        } else {
+            Button { alta = consulta } label: {
+                Label("Es nueva", systemImage: "person.badge.plus")
+                    .font(.seccion)
+                    .frame(maxWidth: .infinity, minHeight: Tema.toque)
+            }
+            .buttonStyle(.glass)
+            .tint(Tema.rosa)
         }
-        .buttonStyle(.glassProminent)
-        .tint(Tema.rosa)
     }
 
     private func explicarPrimera() async {
@@ -146,8 +139,26 @@ struct BuscarView: View {
     private func limpiar() {
         nombre = ""; paterno = ""; materno = ""; edad = ""; comunidad = ""
     }
+
+    #if DEBUG
+    /// Modo captura: deja la pantalla pedida abierta, con datos ficticios.
+    private func abrirCaptura() {
+        switch ModoCaptura.pantalla {
+        case "buscar-resultados":
+            let q = ModoCaptura.consulta
+            nombre = q.nombre; paterno = q.apellidoPaterno; materno = q.apellidoMaterno ?? ""
+            edad = q.edad.map(String.init) ?? ""; comunidad = q.comunidad
+        case "expediente", "expediente-medico":
+            if let p = pacientes.first(where: { $0.folio == ModoCaptura.folioExpediente }) { ruta = [p] }
+        case "alta": alta = ModoCaptura.altaInicial
+        case "escanear": escanear = true
+        default: break
+        }
+    }
+    #endif
 }
 
+/// Una posible coincidencia. Toda la fila es el botón «Es ella».
 struct FilaCandidata: View {
     var candidata: Candidata
     var explicacion: String?
@@ -155,30 +166,35 @@ struct FilaCandidata: View {
     var esElla: () -> Void
 
     var body: some View {
-        Tarjeta(relleno: 14) {
-            HStack(spacing: 12) {
-                AnilloPuntaje(puntaje: candidata.puntaje)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(candidata.paciente.nombreCompleto).font(.headline)
-                    Text(candidata.paciente.subtitulo).font(.subheadline).foregroundStyle(.secondary)
-                    Text(candidata.paciente.folio).font(.caption.monospaced()).foregroundStyle(.tertiary)
+        Button(action: esElla) {
+            Tarjeta(espacio: Tema.Espacio.m) {
+                HStack(alignment: .top, spacing: Tema.Espacio.m) {
+                    AnilloPuntaje(puntaje: candidata.puntaje)
+                    VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+                        Text(candidata.paciente.nombreCompleto).font(.seccion).foregroundStyle(.primary)
+                        Text(candidata.paciente.subtitulo).font(.nota).foregroundStyle(.secondary)
+                        Text(candidata.razones.joined(separator: " · ").capitalizandoPrimera)
+                            .font(.nota).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Spacer(minLength: 0)
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(candidata.razones, id: \.self) { Chip(texto: $0, icono: "checkmark") }
+                LineaIA(texto: explicacion, cargando: explicando, esperando: "Comparando…")
+                HStack(spacing: Tema.Espacio.xs) {
+                    Spacer()
+                    Text("Es ella").font(.seccion)
+                    Image(systemName: "chevron.right").font(.nota.weight(.semibold))
                 }
+                .foregroundStyle(Tema.rosa)
             }
-            LineaIA(texto: explicacion, cargando: explicando)
-            Button(action: esElla) {
-                Label("Es ella: abrir expediente", systemImage: "arrow.right.circle.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glass)
-            .tint(Tema.rosa)
+            .multilineTextAlignment(.leading)
         }
+        .buttonStyle(.plain)
+        .accessibilityHint("Abre su expediente")
     }
+}
+
+extension String {
+    var capitalizandoPrimera: String { prefix(1).uppercased() + dropFirst() }
 }
 
 extension NuevaPaciente: Identifiable {

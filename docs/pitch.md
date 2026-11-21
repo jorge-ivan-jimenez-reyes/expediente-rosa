@@ -1,23 +1,27 @@
-# Guion del pitch (2 minutos)
+# Guion del pitch (2 minutos), versión 2: borrador para OK de Jorge
 
-Un iPhone en modo avión proyectado en pantalla, y una terminal al lado con la API. Las pacientes son las ficticias de `seed/pacientes.json`. Antes de subir: `docker compose up -d`, `cd api && pnpm seed`, y en la app «Preparar jornada» con San Martín Peras **con señal**. Luego modo avión.
+Cubre lo que EIRA pide demostrar en el Reto 1: alta de una paciente ficticia, búsqueda con detección de coincidencia, segunda visita con historial, trabajo sin conexión verificable y explicación del control de acceso.
 
-Los nombres de botones salen de `SPEC.md`; si la UI final dice otra cosa, se ajusta aquí.
+**Antes de subir:** `docker compose up -d` y `cd api && pnpm seed`. Con señal, en la app: Jornada → Servidor (IP de la Mac) → bajar «San Martín Peras». Luego modo avión. Rol inicial: Enfermería.
 
 | Tiempo | En pantalla | Se dice |
 |---|---|---|
-| 0:00–0:15 | Foto o mapa de la sierra de Oaxaca | «Hoy a las nueve y media, EIRA nos contó que en este momento tiene una brigada en la sierra de Oaxaca y Guerrero. Son unas siete horas de camino y hasta tres días sin señal. Llevan 80,000 estudios en tres años, todos anotados en hojas de papel.» |
-| 0:15–0:25 | iPhone: ícono de modo avión encendido | «Cuando una señora regresa al año siguiente, la buscan por su nombre. Si el año pasado alguien escribió "Garsia" con s, su mastografía anormal se queda en una hoja en una caja. Este iPhone está en modo avión desde que empecé.» |
-| 0:25–0:50 | **1. Alta.** Rol Enfermería → «Es nueva» → Adela Ruiz Pacheco, 44 años, San Martín Peras → texto de consentimiento → firma con el dedo → Guardar. Aparece el folio | «Primero, una paciente nueva. Pedimos nombre, apellidos, edad y comunidad, nada más: ni dirección, ni teléfono, ni CURP, que mucha gente en la sierra no tiene. Sin su firma la app no guarda. El folio se genera aquí mismo, sin señal.» |
-| 0:50–1:15 | **2. Búsqueda.** Buscar → «Eulalia Garsia Luna, 67» → primera candidata: Eulalia García Luna, nacida en 1958, con puntaje y razones | «Ahora llega Eulalia. La enfermera escribe García con s y pone la edad, porque no se sabe la fecha. La app encuentra a Eulalia García Luna, nacida en 1958, y dice por qué: nombre parecido, misma edad con un año de margen, misma comunidad. Con Apple Intelligence, el modelo del teléfono lo explica en una línea. A una madre y una hija que se llaman igual las deja separadas porque nacieron con 27 años de diferencia.» |
-| 1:15–1:35 | **3. Segunda visita.** «Es ella» → cambia a rol Médico → expediente: mastografía BI-RADS 4 y ultrasonido anormal del 14 de marzo de 2025, referencia pendiente | «Es ella. La enfermera no ve resultados; el médico sí. En marzo de 2025 su mastografía salió BI-RADS 4 y la mandaron a Huajuapan. No hay registro de que haya llegado. El médico registra el estudio de hoy.» |
-| 1:35–1:55 | **4. Sin señal → sincroniza.** Inicio: «2 pendientes». Quitar modo avión → «Sincronizar» → «2 aplicados». Otra vez → «0 aplicados, 2 repetidos». Terminal: `curl /api/estadisticas` y `/api/seguimiento` | «Todo esto se guardó en el teléfono: dos pendientes, el alta de Adela y el estudio de Eulalia. Quito el modo avión y sincronizo: dos aplicados. Si la señal se corta a la mitad y se manda otra vez, el servidor reconoce cada envío por su llave y no duplica. En el servidor, Eulalia aparece en la lista de seguimiento como vencida.» |
-| 1:55–2:00 | README del repo | «La IA corre en el teléfono y los datos de salud no salen a la nube. El código está en el repo, con licencia MIT y datos ficticios para correrlo.» |
+| 0:00–0:15 | Diapositiva 1 (problema) | «Hoy a las nueve y media, EIRA nos contó que tiene una brigada en la sierra de Oaxaca y Guerrero, a siete horas de camino y hasta tres días sin señal. En tres años han hecho unos 80,000 estudios, anotados en hojas de papel.» |
+| 0:15–0:25 | iPhone con modo avión | «Una mujer que va cuatro veces en un año puede quedar registrada cuatro veces. Este iPhone está en modo avión desde que empecé.» |
+| 0:25–0:45 | **Alta:** Adela Ruiz Pacheco, 44, San Martín Peras → consentimiento → firma → Guardar → folio | «Adela llega por primera vez. La enfermera anota nombre, apellidos, edad y comunidad. No pedimos domicilio, teléfono ni CURP, que mucha gente en la sierra no tiene. Sin la firma de Adela la app no guarda, y el folio sale aquí mismo, sin señal.» |
+| 0:45–1:05 | **Búsqueda:** «Eulalia Garsia Luna, 67» → Eulalia García Luna, 1958, puntaje y razones, línea de IA | «Luego llega Eulalia. La enfermera escribe García con s y pone 67 años, porque no sabe la fecha. La app encuentra a Eulalia García Luna, nacida en 1958, y dice por qué: nombre parecido, misma edad, misma comunidad. El modelo de Apple que corre en el teléfono lo explica en una línea. La enfermera confirma; la app nunca une expedientes sola.» |
+| 1:05–1:25 | **Segunda visita y acceso:** expediente como Enfermería (resultados con candado) → rol Médico → BI-RADS 4 de marzo 2025 → agregar estudio | «La enfermera no ve resultados. Cambio a médico: en marzo de 2025 la mastografía de Eulalia salió BI-RADS 4 y la mandaron a Huajuapan. No hay registro de que haya llegado. El médico anota el estudio de hoy como una visita nueva.» |
+| 1:25–1:50 | **Sin señal → sincroniza:** Jornada «2 pendientes» → quitar modo avión → Sincronizar → terminal `curl /api/seguimiento` y `/api/bitacora` | «Todo quedó en el teléfono: dos registros pendientes. Quito el modo avión y sincronizo. Si la señal se corta y el envío se repite, Valkey reconoce cada registro por su llave y no lo duplica. Eulalia aparece en seguimiento como vencida, y la bitácora dice quién hizo cada cambio, sin datos clínicos.» |
+| 1:50–2:00 | Diapositiva de arquitectura o README | «Los datos de salud no salen a la nube para usar la IA. El repo es público, con licencia MIT y datos ficticios para correrlo.» |
 
-Unas 300 palabras habladas. Si el tiempo aprieta, se corta la frase de madre e hija del punto 2.
+Unas 280 palabras habladas.
+
+## Opcional (si sobra tiempo o lo piden en preguntas)
+
+Foto de la hoja de revisión mamaria de EIRA llenada con datos ficticios → «Escanear» → la app propone el alta y la enfermera revisa.
 
 ## Plan B
 
-- Si Foundation Models no responde, la búsqueda muestra puntaje y razones igual; no se menciona la línea del modelo.
-- Si el iPhone no llega a la API: correr la demo en el simulador con `docker compose stop api` como «sin señal» y `docker compose start api` para sincronizar.
-- Si falla todo lo de iOS: terminal con `curl` a `/api/buscar?nombre=Eulalia&apellidoPaterno=Garsia&apellidoMaterno=Luna&edad=67`, `/api/duplicados` y el seed corrido dos veces (88 aplicados, luego 88 repetidos).
+- Si Foundation Models no responde, la búsqueda muestra puntaje y razones igual; se omite la frase del modelo.
+- Si el iPhone no llega a la API: simulador + «Simular sin señal» en Jornada.
+- Si falla iOS: terminal con `curl` a `/api/buscar?nombre=Eulalia&apellidoPaterno=Garsia&apellidoMaterno=Luna&edad=67`, `/api/duplicados` y el seed corrido dos veces (aplicados, luego repetidos).

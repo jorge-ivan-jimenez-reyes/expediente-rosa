@@ -15,29 +15,29 @@ struct JornadaView: View {
         @Bindable var sync = sync
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: Tema.Espacio.l) {
                     estado
-                    Tarjeta {
-                        Toggle(isOn: $sync.simularSinSenal.animation(Tema.resorte)) {
-                            Label("Simular sin señal", systemImage: "airplane")
-                        }
-                        .tint(Tema.ambar)
-                        Text("Para la demo: lo capturado se queda en el teléfono hasta apagarlo.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    preparar
                     if let resultado { tarjetaResultado(resultado) }
                     if let error {
-                        Label(error, systemImage: "exclamationmark.triangle").font(.footnote).foregroundStyle(Tema.rojo)
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.nota).foregroundStyle(Tema.rojo)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .transition(.opacity)
+                    }
+                    preparar
+                    Tarjeta {
+                        Toggle("Simular sin señal", isOn: $sync.simularSinSenal.animation(Tema.resorte))
+                            .font(.cuerpo)
+                            .tint(Tema.ambar)
+                            .frame(minHeight: Tema.toque)
                     }
                     servidor
                 }
-                .padding(16)
+                .padding(Tema.Espacio.l)
                 .animation(Tema.resorte, value: resultado?.aplicados)
                 .animation(Tema.resorte, value: error)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Tema.fondo)
             .navigationTitle("Jornada")
             .toolbar { ToolbarItem(placement: .topBarLeading) { SelectorRol() } }
             .sensoryFeedback(.success, trigger: exito)
@@ -45,61 +45,62 @@ struct JornadaView: View {
     }
 
     private var estado: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        Tarjeta(espacio: Tema.Espacio.l) {
             HStack {
                 EstadoSenal(enLinea: sync.enLinea)
                 Spacer()
                 if let u = sync.ultimaSync {
                     Text("Última: \(u.formatted(.relative(presentation: .named)))")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.nota).foregroundStyle(.secondary)
                 }
             }
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: Tema.Espacio.s) {
                 Text("\(sync.pendientes)")
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
-                    .foregroundStyle(Tema.degradado)
+                    .font(.cifra)
                     .contentTransition(.numericText(value: Double(sync.pendientes)))
                     .animation(Tema.resorte, value: sync.pendientes)
                 Text(sync.pendientes == 1 ? "registro por mandar" : "registros por mandar")
-                    .foregroundStyle(.secondary)
+                    .font(.cuerpo).foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
             Button {
                 Task { await sincronizar() }
             } label: {
                 Label(sync.sincronizando ? "Sincronizando…" : "Sincronizar", systemImage: "arrow.triangle.2.circlepath")
                     .symbolEffect(.rotate, options: .repeating, isActive: sync.sincronizando)
-                    .frame(maxWidth: .infinity).padding(.vertical, 8)
+                    .font(.seccion)
+                    .frame(maxWidth: .infinity, minHeight: Tema.toque)
             }
             .buttonStyle(.glassProminent)
-            .tint(Tema.rosa)
+            .tint(Tema.rosaRelleno)
             .disabled(!sync.enLinea || sync.sincronizando)
         }
-        .padding(18)
-        .background(.background, in: .rect(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
     }
 
     private var preparar: some View {
         Tarjeta {
-            Label("Antes de salir", systemImage: "suitcase.rolling").font(.headline)
-            Text("Baja al teléfono las pacientes de la comunidad para reconocerlas sin señal.")
-                .font(.footnote).foregroundStyle(.secondary)
-            HStack(spacing: 10) {
+            Text("Preparar jornada").font(.seccion)
+            Text("Baja al teléfono las pacientes de la comunidad antes de salir.")
+                .font(.nota).foregroundStyle(.secondary)
+            HStack(alignment: .bottom, spacing: Tema.Espacio.m) {
                 CampoTexto(titulo: "Comunidad", texto: $comunidad)
                 Button {
                     Task { await prepararJornada() }
                 } label: {
-                    if preparando { ProgressView() } else { Image(systemName: "arrow.down.circle.fill").font(.title2) }
+                    Group {
+                        if preparando { ProgressView() } else { Text("Bajar") }
+                    }
+                    .font(.seccion)
+                    .frame(minWidth: 64, minHeight: Tema.toque)
                 }
                 .buttonStyle(.glass)
                 .tint(Tema.rosa)
                 .disabled(!sync.enLinea || preparando)
-                .padding(.top, 18)
             }
             if let preparadas {
-                Label("\(preparadas) pacientes listas en el teléfono", systemImage: "checkmark.circle.fill")
-                    .font(.footnote).foregroundStyle(Tema.verde)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                Label("\(preparadas) pacientes en el teléfono", systemImage: "checkmark.circle.fill")
+                    .font(.nota).foregroundStyle(Tema.verde)
+                    .transition(.opacity)
             }
         }
         .animation(Tema.resorte, value: preparadas)
@@ -107,44 +108,48 @@ struct JornadaView: View {
 
     private func tarjetaResultado(_ r: ResultadoSync) -> some View {
         Tarjeta {
-            Text("Última sincronización").font(.headline)
-            HStack(spacing: 12) {
-                cifra("\(r.aplicados)", "nuevos", Tema.verde)
-                cifra("\(r.repetidos)", "ya estaban", .secondary)
-                cifra("\(r.posiblesDuplicados.count)", "posibles duplicados", Tema.rosa)
-            }
-            if !r.posiblesDuplicados.isEmpty {
-                Label("La coordinadora los revisa en la pestaña Revisión", systemImage: "person.2.badge.gearshape")
-                    .font(.footnote).foregroundStyle(Tema.rosaProfundo)
+            Text("Última sincronización").font(.seccion)
+            HStack(alignment: .top, spacing: Tema.Espacio.m) {
+                cifra(r.aplicados, "nuevos")
+                cifra(r.repetidos, "ya estaban")
+                cifra(r.posiblesDuplicados.count, "a revisar")
             }
         }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(.opacity)
     }
 
-    private func cifra(_ valor: String, _ etiqueta: String, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(valor).font(.title2.weight(.bold)).foregroundStyle(color).contentTransition(.numericText())
-            Text(etiqueta).font(.caption).foregroundStyle(.secondary)
+    private func cifra(_ valor: Int, _ etiqueta: String) -> some View {
+        VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+            Text("\(valor)").font(.seccion).monospacedDigit().contentTransition(.numericText())
+            Text(etiqueta).font(.nota).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private var servidor: some View {
         Tarjeta {
-            DisclosureGroup("Servidor") {
-                VStack(alignment: .leading, spacing: 8) {
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: Tema.Espacio.s) {
                     TextField("http://IP:8787/api", text: $apiURL)
+                        .font(.cuerpo)
                         .textInputAutocapitalization(.never).autocorrectionDisabled()
                         .keyboardType(.URL)
-                        .padding(10).background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 10))
-                    Button("Usar este servidor") {
+                        .padding(.horizontal, Tema.Espacio.m)
+                        .frame(minHeight: Tema.toque)
+                        .background(Tema.campo, in: .rect(cornerRadius: Tema.Radio.campo))
+                    Button("Usar servidor") {
                         if let u = URL(string: apiURL) { sync.api = ClienteAPI(base: u) }
                     }
+                    .frame(minHeight: Tema.toque)
                     .tint(Tema.rosa)
                 }
-                .padding(.top, 8)
+                .padding(.top, Tema.Espacio.s)
+            } label: {
+                Text("Servidor").font(.cuerpo).foregroundStyle(.primary)
             }
             .tint(.secondary)
+            .frame(minHeight: Tema.toque)
         }
     }
 

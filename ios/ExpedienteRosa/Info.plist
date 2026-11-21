@@ -38,6 +38,17 @@
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Para convertir el dictado en texto dentro del teléfono.</string>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>FondoArranque</string>
+		<key>UIImageName</key>
+		<string>LogoMarca</string>
+	</dict>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
 </dict>
 </plist>
