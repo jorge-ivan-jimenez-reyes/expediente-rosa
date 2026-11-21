@@ -1,8 +1,16 @@
-# Expediente Rosa
+<h1><img src="docs/diseno/mascota-saluda.svg" width="120" align="middle" alt="Mascota de Expediente Rosa: un expediente rosa que saluda"> Expediente Rosa</h1>
 
 Expediente digital por paciente para las jornadas de tamizaje de cáncer de mama y cervicouterino de EIRA Movimiento Rosa A.C. Responde al Reto 1 de EIRA en el Nerdearla Vibeathon CDMX, 21 de noviembre de 2026.
 
 Todos los datos de este repositorio son ficticios.
+
+| Buscar con coincidencias | Expediente con visitas | Próxima jornada en el teléfono |
+|:-:|:-:|:-:|
+| <img src="docs/diseno/capturas/buscar-v2-buscar-resultados-p3.png" width="200" alt="Buscar: «Ma. Guadalupe Hdz Velasquez, 51» encuentra a María Guadalupe Hernández Velázquez con puntaje 100 y sus razones"> | <img src="docs/diseno/capturas/reto1-expediente-medico.png" width="200" alt="Expediente visto por el médico: dos visitas con sus estudios, BI-RADS y conducta"> | <img src="docs/diseno/capturas/mascota-jornada.png" width="200" alt="Jornada: San Martín Peras lista en el teléfono con 12 pacientes; sin señal, 3 registros por mandar"> |
+| Leyendo una hoja de papel | Estados de la mascota | Panel: asistente de coordinación |
+| <img src="docs/diseno/capturas/mascota-escanear-leyendo.png" width="200" alt="Escanear hoja: la app lee una hoja de registro de ejemplo"> | <img src="docs/diseno/capturas/mascota-estados.png" width="200" alt="Las cinco expresiones de la mascota: reposo, saluda, contenta, buscando y sin señal"> | <img src="docs/diseno/capturas/panel-asistente.png" width="240" alt="Asistente del panel: respuestas con cifras y folios redactadas por el modelo de Apple en la Mac"> |
+| Panel: tablero | Panel: patología | Panel: jornadas programadas |
+| <img src="docs/diseno/capturas/panel-tablero.png" width="270" alt="Tablero de Coordinación: personas, estudios y anormales por estado y comunidad"> | <img src="docs/diseno/capturas/panel-patologia.png" width="270" alt="Patología: papanicolaous por interpretar y clasificación Bethesda"> | <img src="docs/diseno/capturas/panel-jornadas-p2-guardada.png" width="270" alt="Jornadas programadas con pacientes con expediente y estudios pendientes por comunidad"> |
 
 ## El problema
 
@@ -14,16 +22,24 @@ El reto pide demostrar cuatro cosas: alta de una paciente ficticia, búsqueda co
 
 ## Qué hay en el repositorio
 
-- **App de iPhone** (`ios/`): SwiftUI y SwiftData en iOS 26. Funciona completa sin señal. Vision lee las hojas de papel en español y Foundation Models, el modelo de Apple que corre dentro del teléfono, explica coincidencias, resume el historial y ayuda a leer las hojas. Roles en la app: Enfermería, Médico y Coordinación.
-- **API** (`api/`): Hono sobre Node 20 con Valkey. Junta lo que mandan las brigadas, detecta duplicados entre teléfonos y lleva el seguimiento de anormales y la bitácora. La imagen `valkey/valkey-bundle` trae valkey-search, que la API usa para buscar pacientes por similitud del nombre.
-- **Panel web** (`panel/`): HTML, CSS y JavaScript sin build, servido por la misma API en `/panel`. Coordinación ve el tablero por estado y comunidad, el seguimiento de anormales y la bitácora. Patología ve los papanicolaous por interpretar y captura el resultado Bethesda.
+- **App de iPhone y iPad** (`ios/`): SwiftUI y SwiftData en iOS 26. Funciona completa sin señal. Vision lee las hojas de papel en español y Foundation Models, el modelo de Apple que corre dentro del teléfono, explica coincidencias, resume el historial y ayuda a leer las hojas. Roles en la app: Enfermería, Médico y Coordinación. En iPad gira a cualquier orientación y el contenido queda en una columna centrada.
+- **API** (`api/`): Hono sobre Node 20 con Valkey. Junta lo que mandan las brigadas, detecta duplicados entre teléfonos y lleva el seguimiento de anormales, las jornadas programadas y la bitácora. La imagen `valkey/valkey-bundle` trae valkey-search, que la API usa para buscar pacientes por similitud del nombre.
+- **Panel web** (`panel/`): HTML, CSS y JavaScript sin build, servido por la misma API en `/panel`. Coordinación ve el tablero por estado y comunidad, programa jornadas, lleva el seguimiento de anormales, revisa la bitácora y le pregunta al asistente. Patología ve los papanicolaous por interpretar y captura el resultado Bethesda.
+- **Asistente** (`asistente/`): binario Swift que usa Foundation Models en la Mac de la API para redactar las respuestas del asistente de coordinación.
+
+Además de lo que pide el reto:
+
+- **Jornadas programadas.** Coordinación programa en el panel la comunidad, la fecha y el equipo. La app muestra las jornadas de los próximos 30 días y baja sola a las pacientes de cada comunidad: al abrirse, cada 10 segundos mientras hay señal, cuando la señal vuelve y en segundo plano cuando iOS la despierta. «Bajar», a mano, sigue disponible.
+- **Leer la hoja de diagnóstico.** En «Agregar estudio», «Leer hoja» toma la foto de la hoja del día y llena tipo de estudio, BI-RADS o Bethesda, referencia y notas. Usa Vision y reglas fijas, así que funciona sin Apple Intelligence. El médico revisa antes de guardar.
+- **Asistente de coordinación.** En el panel, Coordinación pregunta en español y recibe una respuesta corta con cifras y folios. La API calcula las cifras y el modelo de Apple, en la Mac, solo las redacta (detalle más abajo).
+- **Bitácora con folio y nombre.** Cada entrada muestra el folio de la paciente y quién capturó, por ejemplo «Rocío (Enfermería)». El nombre se escribe una vez en la tarjeta «Quién ve qué» de la pestaña Jornada; en el panel sale del nombre con que se entra.
 
 ## El recorrido de una brigada
 
-1. Antes de salir, con señal: en Jornada elige estado y comunidad y toca «Bajar». El teléfono guarda a las pacientes que ya vinieron, con su historial.
+1. Antes de salir, con señal: Coordinación programa la jornada en el panel y el teléfono baja solo a las pacientes que ya vinieron a esa comunidad, con su historial. También se puede elegir estado y comunidad en Jornada y tocar «Bajar».
 2. En la comunidad, sin señal: Enfermería busca por nombre y edad. «Es ella» abre su expediente; «Es nueva» pide datos mínimos y la firma del consentimiento.
 3. El médico ve el historial (resultado, BI-RADS, conducta) y registra los estudios de hoy, a mano o leyendo la hoja con la cámara. El papanicolaou queda «En laboratorio».
-4. Al volver la señal toca «Sincronizar». Lo que se reenvía no se duplica; los posibles duplicados y los cambios en conflicto van a Revisión, donde Coordinación decide.
+4. Al volver la señal la app sincroniza sola; «Sincronizar» lo hace a mano. Lo que se reenvía no se duplica; los posibles duplicados y los cambios en conflicto van a Revisión, donde Coordinación decide.
 5. En el panel web, Coordinación ve personas, estudios y anormales por estado y comunidad. Patología interpreta cada papanicolaou; si sale anormal, entra a seguimiento con fecha límite.
 6. Coordinación avisa a la paciente y la marca como avisada. La siguiente vez que la brigada baje esa comunidad, el teléfono ya trae el resultado.
 
@@ -120,7 +136,7 @@ Para desplegarlo hay dos caminos. El primero es una Mac en la oficina de coordin
 
 ## Credenciales
 
-Ninguna. No hay llaves de terceros porque la IA corre en el teléfono. Las variables de la API están en `.env.example` y los valores por defecto sirven para correrlo en local: `VALKEY_URL` (`redis://localhost:6379`) y `PORT` (`8787`).
+Ninguna. No hay llaves de terceros porque la IA corre en el teléfono y, para el asistente, en la Mac de la API. Las variables de la API están en `.env.example` y los valores por defecto sirven para correrlo en local: `VALKEY_URL` (`redis://localhost:6379`) y `PORT` (`8787`).
 
 `CLAVE_DATOS` es opcional: una llave de 32 bytes en base64 que cifra en reposo, con AES-256-GCM, la nota de cada estudio y el consentimiento. Sin ella la API guarda en claro y lo avisa en el log. `docker-compose.yml` no la pasa al contenedor; para probar el cifrado, corre la API fuera de Docker:
 
@@ -135,10 +151,10 @@ curl http://localhost:8787/api/salud      # "cifrado":true
 
 - **Datos mínimos.** Nombre, apellidos, edad o fecha de nacimiento y comunidad. No se piden dirección, teléfono ni CURP.
 - **Consentimiento firmado.** La Ley Federal de Protección de Datos Personales en Posesión de los Particulares (DOF, 20 de marzo de 2025) pide consentimiento expreso y por escrito para datos de salud. La paciente firma en la pantalla y sin firma no se guarda. El trazo se queda en el teléfono; al servidor va la fecha del consentimiento.
-- **IA en el teléfono.** Leer hojas, explicar coincidencias y resumir el historial no manda datos de salud a ningún servicio en la nube.
+- **IA en el teléfono y en la Mac.** Leer hojas, explicar coincidencias y resumir el historial no manda datos de salud a ningún servicio en la nube. El asistente del panel usa el modelo de Apple en la misma Mac que la API.
 - **Roles.** Enfermería captura y no ve resultados. Médico ve el historial y agrega estudios. Coordinación revisa duplicados, conflictos, seguimiento y bitácora. Patología solo ve las muestras por interpretar. En esta versión el rol se elige sin login.
 - **Nunca se fusiona solo.** El servidor propone posibles duplicados; unir dos expedientes lo decide una persona, y la ficha unida queda marcada, no se borra.
-- **Bitácora sin datos clínicos.** Registra quién hizo qué, cuándo y desde qué dispositivo, sin resultados, clasificaciones, notas ni valores de campos.
+- **Bitácora sin datos clínicos.** Registra quién hizo qué, cuándo, desde qué dispositivo y el folio de la paciente, sin resultados, clasificaciones, notas ni valores de campos. De las consultas al asistente guarda solo quién preguntó, sin la pregunta ni la respuesta.
 - **Cifrado en reposo** de notas y consentimiento con `CLAVE_DATOS`.
 
 ## Datos ficticios
@@ -178,7 +194,7 @@ ios/ExpedienteRosa/      app: Modelo, Sync, Coincidencias, Inteligencia, Pantall
 ios/ExpedienteRosaTests/ pruebas XCTest
 panel/                   panel web de Coordinación y Patología
 seed/                    pacientes.json
-docs/                    recorrido, pitch, texto de Devpost, presentación, diseño y hojas de ejemplo
+docs/                    recorrido, pitch, texto y galería de Devpost, presentación, diseño y hojas de ejemplo
 SPEC.md                  problema, roles y contrato de la API
 ORQUESTACION.md          reparto del trabajo y bitácora de verificación
 docker-compose.yml       Valkey (valkey-bundle) y la API

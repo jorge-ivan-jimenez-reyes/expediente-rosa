@@ -1,6 +1,6 @@
 # Expediente Rosa
 
-Expediente digital por paciente para las jornadas de tamizaje de EIRA Movimiento Rosa A.C. Una app de iPhone que funciona sin señal reconoce a la paciente que regresa aunque su nombre venga escrito distinto, y un panel web le da a coordinación y patología lo que juntaron las brigadas. Reto 1 de EIRA, Nerdearla Vibeathon CDMX, 21 de noviembre de 2026.
+Expediente digital por paciente para las jornadas de tamizaje de EIRA Movimiento Rosa A.C. Una app de iPhone y iPad que funciona sin señal reconoce a la paciente que regresa aunque su nombre venga escrito distinto, y un panel web le da a coordinación y patología lo que juntaron las brigadas. Reto 1 de EIRA, Nerdearla Vibeathon CDMX, 21 de noviembre de 2026.
 
 ## Inspiración
 
@@ -10,31 +10,36 @@ Cuando una paciente regresa, la identifican por su nombre completo. Si un año l
 
 ## Qué hace
 
-En el iPhone, sin señal:
+En el iPhone o el iPad, sin señal:
 
 - **Alta.** Nombre, apellidos, edad o fecha de nacimiento y comunidad. La paciente firma el consentimiento en la pantalla; sin firma no se guarda. El teléfono genera el ID y un folio corto.
 - **Búsqueda con coincidencias.** La enfermera escribe lo que le dicen y la app propone candidatas con puntaje y razones. Reconoce abreviaturas y apodos (Ma., Lupe, Chayo, Hdz, Mtz), errores de captura del español (b/v, s/z, ll/y, j/g, h muda) y apellido materno faltante, y compara año de nacimiento contra edad. A una madre y una hija con el mismo nombre completo las deja separadas.
 - **Segunda visita con historial.** «Es ella» abre el expediente con estudios anteriores, BI-RADS o Bethesda y la conducta indicada. El médico registra los estudios de hoy en una visita nueva.
-- **Hojas de papel.** Con una foto, la app lee la hoja de EIRA y propone los datos de la paciente o el estudio de hoy. Quien captura revisa antes de guardar.
-- **Sincronización.** Todo entra a una cola en el teléfono. Al volver la señal se manda al servidor; cada registro lleva una llave única y un reenvío no duplica nada.
+- **Hojas de papel.** «Escanear» lee la hoja de registro de EIRA y busca a la paciente. En «Agregar estudio», «Leer hoja» toma la foto de la hoja de diagnóstico y llena tipo de estudio, BI-RADS o Bethesda, referencia y notas. Las dos funcionan sin Apple Intelligence, y quien captura revisa antes de guardar.
+- **Jornadas programadas.** La pestaña Jornada muestra las jornadas de los próximos 30 días que programó Coordinación y baja sola a las pacientes de cada comunidad: al abrir la app, cada 10 segundos mientras hay señal, cuando la señal vuelve y en segundo plano cuando iOS la despierta.
+- **Sincronización.** Todo entra a una cola en el teléfono. Al volver la señal se manda solo al servidor; cada registro lleva una llave única y un reenvío no duplica nada.
 - **Revisión.** Si dos teléfonos dieron de alta a la misma señora, o cambiaron el mismo dato, el servidor no decide: Coordinación ve las dos versiones y elige.
 
 En el panel web:
 
 - **Tablero de Coordinación.** Personas únicas, estudios, anormales y muestras pendientes, por estado y por comunidad, con el conteo de la jornada en vivo.
+- **Jornadas.** Coordinación programa comunidad, fecha y equipo, y ve cuántas pacientes con expediente y cuántos estudios pendientes hay en cada una.
 - **Patología.** El patólogo ve los papanicolaous por interpretar, el que más espera primero, y captura el resultado Bethesda. Si sale anormal, entra a seguimiento.
 - **Seguimiento.** Los anormales con fecha límite de 15 días (6 meses para BI-RADS 3), vencidos primero. Coordinación avisa a la paciente y la marca como avisada.
-- **Bitácora.** Quién hizo qué, cuándo y desde qué dispositivo, sin datos clínicos.
+- **Bitácora.** Quién hizo qué, cuándo, desde qué dispositivo y con qué paciente (por folio), sin datos clínicos. Quien captura escribe su nombre una vez y la bitácora lo muestra con su rol, por ejemplo «Rocío (Enfermería)».
+- **Asistente de coordinación.** Coordinación pregunta en español («¿Cuántas mujeres de San Martín Peras tienen un BI-RADS 4 sin atender?») y recibe una respuesta corta con cifras y folios que llevan a Seguimiento o a Patología. «Datos usados» muestra lo que se le pasó al modelo.
 
 Roles: Enfermería captura y no ve resultados; Médico ve el historial y agrega estudios; Coordinación revisa duplicados, conflictos, seguimiento y bitácora; Patología solo ve las muestras por interpretar.
 
 ## Cómo lo construimos
 
-- **iPhone, iOS 26.** SwiftUI y SwiftData guardan todo en el teléfono. Vision lee el texto de las hojas en español. Foundation Models, el modelo de Apple que corre dentro del dispositivo, explica en una línea por qué dos fichas parecen la misma persona, resume el historial en tres líneas y pasa hojas a campos con salida estructurada (`@Generable`). Sin Apple Intelligence todo funciona: la lectura de las hojas de EIRA usa reglas fijas y solo faltan la explicación y el resumen.
+- **iPhone y iPad, iOS 26.** SwiftUI y SwiftData guardan todo en el teléfono. En iPad la app gira a cualquier orientación y el contenido queda en una columna centrada. Vision lee el texto de las hojas en español. Foundation Models, el modelo de Apple que corre dentro del dispositivo, explica en una línea por qué dos fichas parecen la misma persona, resume el historial en tres líneas y pasa hojas a campos con salida estructurada (`@Generable`). Sin Apple Intelligence todo funciona: la lectura de las hojas de EIRA usa reglas fijas y solo faltan la explicación y el resumen.
 - **API.** Hono sobre Node 20 con Valkey. Las pacientes van en hashes con número de versión, los estudios en listas y las visitas en sorted sets por fecha. Las llaves de envío usan `SET NX`, que da la idempotencia. Un cambio hecho sobre una versión vieja se compara y se aplica en un script Lua; si no coincide, queda como conflicto. Duplicados, seguimiento, conflictos y muestras por interpretar van en sorted sets, la bitácora en un stream y el conteo de la jornada en un canal pub/sub que llega al panel por Server-Sent Events. La imagen `valkey-bundle` trae valkey-search: buscamos pacientes por KNN sobre un vector de trigramas fonéticos del nombre, sin modelo de embeddings.
 - **Panel web.** HTML, CSS y JavaScript sin build ni dependencias, servido por la misma API.
+- **Jornadas programadas.** Cada jornada es un hash en Valkey y un sorted set las ordena por fecha. La app las pide al abrir, cada 10 segundos con señal y con una tarea de segundo plano (`BGAppRefreshTaskRequest`), y baja una sola vez cada comunidad.
+- **Asistente.** La API lee la pregunta con reglas, calcula la respuesta con los datos de Valkey y le pasa al modelo de Apple, en la misma Mac, solo ese contexto. Un binario Swift con Foundation Models redacta. Si la redacción trae un folio o un número que no venía en el contexto, la API la descarta y muestra la respuesta calculada. Sin Apple Intelligence da las mismas cifras con una redacción fija.
 - **Coincidencias.** Normalización de apodos y abreviaturas, una fonética para errores de captura en español, Jaro-Winkler por campo y ajuste por año de nacimiento y comunidad, con umbral de 0.82. La misma lógica corre en TypeScript (servidor) y en Swift (teléfono), y comprobamos que las dos den el mismo resultado.
-- **Privacidad.** Datos mínimos, consentimiento firmado, IA dentro del teléfono, roles, bitácora sin datos clínicos y cifrado AES-256-GCM en reposo de la nota clínica y el consentimiento.
+- **Privacidad.** Datos mínimos, consentimiento firmado, IA dentro del teléfono y en la Mac de la API (nada sale a la nube), roles, bitácora sin datos clínicos y cifrado AES-256-GCM en reposo de la nota clínica y el consentimiento. De las consultas al asistente la bitácora guarda solo quién preguntó.
 - **Forma de trabajo.** Un `SPEC.md` con el problema y un `ORQUESTACION.md` con carriles separados por carpeta. Varios agentes de código (Claude Code) trabajaron en paralelo, uno por carril: sincronización, coincidencias en Swift, Valkey, Foundation Models y entrega. Cada tarea se cerró con su verificación pegada en una bitácora. La interfaz de la app la hice yo.
 
 ## Retos
@@ -51,7 +56,7 @@ Roles: Enfermería captura y no ve resultados; Médico ve el historial y agrega 
 - Con las 40 pacientes ficticias del seed, los 6 pares de la misma señora escrita distinto salen en la cola de duplicados y los 2 casos de madre e hija no.
 - El seed carga por el mismo `POST /api/sync` que usa el teléfono: la primera vez aplica 131 eventos y la segunda responde 131 repetidos.
 - «Eulalia Garsia Luna, 67 años» encuentra a Eulalia García Luna, nacida en 1958, con puntaje 1.0.
-- 42 pruebas de la API en verde, entre ellas idempotencia, duplicados, unir expedientes, conflictos de versión y el flujo de patología.
+- 57 pruebas de la API en verde, entre ellas idempotencia, duplicados, unir expedientes, conflictos de versión, el flujo de patología, jornadas y el asistente. Una más, la de valkey-search, corre solo si Valkey trae el módulo.
 - El puerto en Swift de las coincidencias da la misma salida que TypeScript en 15 casos, a tres decimales.
 
 ## Qué aprendimos
