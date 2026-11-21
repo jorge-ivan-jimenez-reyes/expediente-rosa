@@ -1,4 +1,4 @@
-# Guion del pitch (2 minutos), versión 8
+# Guion del pitch (2 minutos), versión 9
 
 Orden: la paciente que regresa primero, luego la nueva, sincronizar y el tablero. Cubre lo que pide el Reto 1: alta de una paciente ficticia, búsqueda con detección de coincidencia, segunda visita con historial, trabajo sin conexión verificable y explicación del control de acceso. Son unas 300 palabras habladas.
 
@@ -17,14 +17,16 @@ Hilo (versión de Jorge): planear la visita en el panel → el teléfono se prep
 
 | Tiempo | En pantalla | Se dice |
 |---|---|---|
-| 0:00–0:10 | Portada | «Les presentamos Expediente Rosa, un ecosistema para administrar los expedientes de las pacientes de EIRA: una app para la brigada y un panel web para la oficina, hecho para trabajar días sin señal.» |
-| 0:10–0:28 | Panel → Jornadas → «Programar jornada»: Oaxaca, San Martín Peras, 25 de noviembre, equipo «Enf. Rocío, Dr. Andrés» → Guardar. Simulador → Jornada → «Actualizar ahora» → tarjeta verde «12 pacientes» | «Lunes, Ciudad Guzmán. Coordinación programa la siguiente visita: San Martín Peras, Oaxaca, martes 25, y quién de la brigada va. No es la primera vez que van: ahí ya hay 12 mujeres con expediente. En cuanto la jornada queda programada, el teléfono de la brigada baja solo esas 12 historias.» |
-| 0:28–0:40 | Tarjeta «Lista en el teléfono» | «Los datos se quedan en el teléfono, cifrados por iOS con la llave del propio equipo. La IA es el modelo de Apple que corre en el chip del teléfono: lo que lee de las pacientes no sale a ningún servidor.» |
-| 0:40–1:00 | Activar «Simular sin señal» → Buscar → Escanear → Ejemplo «Eulalia, marzo 2025» → aparece Eulalia García Luna → «Es ella» | «Martes, nueve y cuarenta, en la sierra. Se va la señal y no pasa nada: los datos ya están aquí. Llega una cara conocida, Eulalia García Luna, de 67 años, con su hoja de 2025. Rocío la escanea y la app la reconoce aunque venga escrita distinto. Rocío confirma; la app nunca une expedientes sola.» |
-| 1:00–1:18 | Expediente como Enfermería (candado) → rol Médico → BI-RADS 4 de 2025 → Agregar estudio → «Leer hoja» → «Hoja de hoy: Eulalia» → Guardar | «Rocío no ve resultados; el médico sí. Ve el BI-RADS 4 de 2025 y la referencia a Huajuapan que nunca se cerró. Le toma foto a la hoja de hoy y la app llena BI-RADS 4, la referencia y la nota. Él revisa y guarda: no se crea otra paciente, se actualiza la que ya existía.» |
-| 1:18–1:38 | Jornada «pendientes» → apagar «Simular sin señal» → se sincroniza solo | «Jueves, seis y veinte. La camioneta llega a Juxtlahuaca, vuelve la señal y la app sincroniza sola. Si la señal se corta a la mitad, no pasa nada: cada registro lleva una llave y Valkey no aplica dos veces el mismo. Eulalia entra sola a la lista de seguimiento.» |
-| 1:38–1:50 | Panel → Tablero San Martín Peras → Patología → Seguimiento | «Viernes, en Ciudad Guzmán. Coordinación ve lo que trajo la brigada, el patólogo interpreta los papanicolaous en laboratorio y Eulalia aparece en seguimiento para que alguien la llame.» |
-| 1:50–2:00 | Diapositiva «Lo que pidió EIRA» | «Eso cubre lo que pidió EIRA: identificador estable, coincidencias que confirma una persona, captura sin señal, sincronización con conflictos, visitas aparte, roles y bitácora. El código es público, con licencia MIT.» |
+| 0:00–0:30 | Portada (mascota saludando) | «Ella es Rocío, enfermera de una brigada de EIRA. Tiene enfrente a una señora que dice que ya vino el año pasado. Rocío busca en sus carpetas y no la encuentra: el año pasado alguien escribió su apellido con s. Hoy EIRA nos compartió que una mujer que va cuatro veces en un año a sus jornadas puede quedar registrada hasta cuatro veces. Para eso hicimos Expediente Rosa, un ecosistema para administrar los expedientes de las pacientes de EIRA: una app para la brigada y un panel web para la oficina, hecho para trabajar días sin señal.» |
+| 0:30–0:42 | Panel → Jornadas → «Programar jornada» San Martín Peras, 25 nov, equipo → Guardar. Simulador → Jornada: tarjeta verde «12 pacientes» | «Antes de salir, coordinación programa la visita en el panel: San Martín Peras, martes 25, y quién va. El teléfono de la brigada baja solo las 12 historias de esa comunidad.» |
+| 0:42–0:48 | Tarjeta «Lista en el teléfono» | «Se quedan en el teléfono, cifradas, y la IA de Apple trabaja ahí mismo, sin mandar nada a ningún servidor.» |
+| 0:48–1:05 | Activar «Simular sin señal» (la mascota saca su nube) → Buscar → Escanear hoja → Ejemplo «Eulalia, marzo 2025» → Eulalia García Luna → «Es ella» | «En la sierra se va la señal y no pasa nada. La señora es Eulalia y trae su hoja de 2025. Rocío la escanea y la app la reconoce aunque venga escrita distinto. Rocío confirma; la app nunca une expedientes sola.» |
+| 1:05–1:18 | Expediente como Enfermería (candado) → rol Médico → BI-RADS 4 de 2025 → Agregar estudio → «Leer hoja» → «Hoja de hoy: Eulalia» → Guardar | «Rocío no ve resultados; el médico sí: un BI-RADS 4 de 2025 con una referencia que nunca se cerró. Le toma foto a la hoja de hoy, la app llena BI-RADS 4 y la referencia, y él revisa y guarda.» |
+| 1:18–1:33 | Jornada «pendientes» → apagar «Simular sin señal» → se sincroniza solo (mascota contenta) | «Vuelve la señal y la app sincroniza sola. Si se corta a la mitad, cada registro lleva una llave y Valkey no aplica dos veces el mismo. Eulalia entra sola a la lista de seguimiento.» |
+| 1:33–1:47 | Panel → Tablero → Patología → Asistente: «¿Qué pasó con Eulalia?» | «En la oficina, coordinación ve lo que trajo la brigada, el patólogo interpreta los papanicolaous, y el asistente, que también corre en esta Mac, resume el caso de Eulalia.» |
+| 1:47–2:00 | Diapositiva «Lo que pidió EIRA» → cierre (mascota) | «Eso cubre lo que pidió EIRA: identificador estable, coincidencias que confirma una persona, captura sin señal, sincronización con conflictos, visitas aparte, roles y bitácora. El código es público, con licencia MIT.» |
+
+Unas 330 palabras: va justo. Si te pasas, corta primero la frase de privacidad (0:42) y luego la del asistente.
 
 ## Si preguntan
 
