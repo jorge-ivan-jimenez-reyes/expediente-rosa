@@ -13,7 +13,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const API_URL = (process.env.API_URL ?? 'http://localhost:8787/api').replace(/\/$/, '');
-const archivo = resolve(dirname(fileURLToPath(import.meta.url)), '../../seed/pacientes.json');
+const archivo = process.env.SEED_ARCHIVO ? resolve(process.env.SEED_ARCHIVO) : resolve(dirname(fileURLToPath(import.meta.url)), '../../seed/pacientes.json');
 
 type EstudioSeed = { id: string; tipo: string; fecha: string; resultado: string; nota?: string; registradoPor: string };
 type PacienteSeed = Record<string, unknown> & { id: string; comunidad: string; creadaPor: string; _grupo?: string; estudios: EstudioSeed[] };

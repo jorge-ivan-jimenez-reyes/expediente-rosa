@@ -1,0 +1,29 @@
+{
+  "_nota": "Datos ficticios mínimos para la demo: Eulalia (su historia de 2025) y una visita de 2026. Personas inventadas.",
+  "pacientes": [
+    {
+      "id": "06097c1e-57d2-5aee-aa4f-d587cc8dc475", "folio": "JUX-007",
+      "nombre": "Eulalia", "apellidoPaterno": "García", "apellidoMaterno": "Luna",
+      "nacimiento": "1958-12-02", "comunidad": "San Martín Peras", "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:17:00-06:00", "creadaPor": "Enf. Rocío", "creada": "2025-03-14T09:17:00-06:00",
+      "estudios": [
+        { "id": "edce304e-3213-5938-ac61-8b0360dfc515", "tipo": "mastografia", "fecha": "2025-03-14", "resultado": "anormal",
+          "clasificacion": "BI-RADS 4", "conducta": "referencia", "nota": "Referida a hospital de Huajuapan.", "registradoPor": "Dr. Andrés" },
+        { "id": "e6c94db9-b9a9-5e1d-a9e2-8ca728a8ef8a", "tipo": "ultrasonido", "fecha": "2025-03-14", "resultado": "anormal",
+          "clasificacion": "BI-RADS 4", "nota": "Nódulo sólido irregular de 14 mm en mama izquierda.", "registradoPor": "Dr. Andrés" }
+      ]
+    },
+    {
+      "id": "3f2a9b1c-6d4e-5a7b-8c9d-0e1f2a3b4c5d", "folio": "JUX-021",
+      "nombre": "Petra", "apellidoPaterno": "Ramírez", "apellidoMaterno": "Cruz",
+      "nacimiento": "1974-06-20", "comunidad": "San Martín Peras", "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2026-03-11T10:05:00-06:00", "creadaPor": "Enf. Rocío", "creada": "2026-03-11T10:05:00-06:00",
+      "estudios": [
+        { "id": "7a1b2c3d-4e5f-5a6b-9c7d-8e9f0a1b2c3d", "tipo": "mastografia", "fecha": "2026-03-11", "resultado": "normal",
+          "clasificacion": "BI-RADS 1", "conducta": "rutina-1-anio", "registradoPor": "Dr. Andrés" },
+        { "id": "9b8c7d6e-5f4a-5b3c-a2d1-e0f9a8b7c6d5", "tipo": "papanicolaou", "fecha": "2026-03-11", "resultado": "pendiente",
+          "etapa": "en-laboratorio", "registradoPor": "Enf. Rocío" }
+      ]
+    }
+  ]
+}

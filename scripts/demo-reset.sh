@@ -24,15 +24,14 @@ for _ in $(seq 1 40); do curl -sf "$API/salud" >/dev/null && break; sleep 0.5; d
 curl -sf "$API/salud" >/dev/null || { echo "La API no respondió; revisa /tmp/eira-api.log"; exit 1; }
 
 echo "3/5 Cargando las pacientes ficticias"
-(cd api && API_URL="$API" pnpm -s seed >/dev/null)
+# Por defecto, el ejemplo mínimo de la demo (Eulalia 2025 + Petra 2026). Con SEED=completo, las 40 pacientes.
+if [[ "${SEED:-minimo}" == "completo" ]]; then
+  (cd api && API_URL="$API" npx tsx scripts/seed.ts >/dev/null)
+else
+  (cd api && SEED_ARCHIVO=../seed/demo-minimo.json API_URL="$API" npx tsx scripts/seed.ts >/dev/null)
+fi
 
-echo "4/5 Programando jornadas"
-# San Martín Peras se programa en vivo durante la demo.
-for x in "Huejuquilla|Jalisco|2026-12-02" "Metlatónoc|Guerrero|2026-12-09"; do
-  IFS='|' read -r c e f <<< "$x"
-  curl -sf -X POST "$API/jornadas" -H 'content-type: application/json' \
-    -d "{\"comunidad\":\"$c\",\"estado\":\"$e\",\"fecha\":\"$f\",\"autor\":\"Coordinación EIRA\"}" >/dev/null
-done
+echo "4/5 Jornadas: ninguna (San Martín Peras se programa en vivo en el panel)"
 
 if [[ "${1:-}" == "--app" ]]; then
   echo "5/5 Simulador: reinstalando la app limpia"
