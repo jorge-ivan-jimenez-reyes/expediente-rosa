@@ -221,7 +221,7 @@
         <div class="lugar">San Martín Peras</div>
         <div class="estado">Mixteca de Oaxaca</div>
         <span class="pildora ambar"><svg><use href="#sin-senal"/></svg>Sin señal</span>
-        <p class="pasa">Rocío busca a Eulalia y da de alta a Adela.</p>
+        <p class="pasa">Rocío escanea la hoja de Eulalia; el médico registra su estudio.</p>
       </div>
       <div class="parada entra" style="--d:2">
         <div class="dia">Jueves<span>18:20</span></div>
@@ -298,6 +298,22 @@
         <tr class="entra" style="--d:1"><td>Médico</td><td class="donde">iPhone</td><td>Agrega estudios y resultados</td><td class="ve">El historial completo, con BI-RADS</td></tr>
         <tr class="entra" style="--d:2"><td>Coordinación</td><td class="donde">Panel web e iPhone</td><td>Decide duplicados y conflictos</td><td class="ve">Tablero, seguimiento y bitácora</td></tr>
         <tr class="entra" style="--d:3"><td>Patología</td><td class="donde">Panel web</td><td>Interpreta papanicolaous (Bethesda)</td><td class="ve">Solo las muestras por interpretar</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Lo que pidió EIRA -->
+  <section class="slide" aria-label="Lo que pidió EIRA">
+    <h2>Lo que pidió EIRA en el Reto 1</h2>
+    <table class="roles">
+      <thead><tr><th scope="col">Pidió</th><th scope="col">Cómo quedó</th></tr></thead>
+      <tbody>
+        <tr class="entra" style="--d:0"><td>Identificador estable por paciente</td><td>ID interno y folio que se generan en el teléfono, sin señal</td></tr>
+        <tr class="entra" style="--d:1"><td>Coincidencias con confirmación humana</td><td>Nombre, apellidos, edad y comunidad; la enfermera o coordinación decide. Nunca se une sola</td></tr>
+        <tr class="entra" style="--d:2"><td>Captura sin internet</td><td>Todo vive en el teléfono hasta 3 días; la jornada se baja sola antes de salir</td></tr>
+        <tr class="entra" style="--d:3"><td>Sincronización con detección de conflictos</td><td>Llave única por registro (Valkey no duplica) y versión por ficha: el cambio viejo va a Revisión</td></tr>
+        <tr class="entra" style="--d:4"><td>Visitas y servicios por separado</td><td>Cada visita con sus estudios, BI-RADS, Bethesda y conducta</td></tr>
+        <tr class="entra" style="--d:5"><td>Roles y bitácora de cambios</td><td>Enfermería, Médico, Coordinación y Patología; bitácora de quién, qué y cuándo, sin datos clínicos</td></tr>
       </tbody>
     </table>
   </section>

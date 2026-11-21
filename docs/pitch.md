@@ -1,4 +1,4 @@
-# Guion del pitch (2 minutos), versión 7
+# Guion del pitch (2 minutos), versión 8
 
 Orden: la paciente que regresa primero, luego la nueva, sincronizar y el tablero. Cubre lo que pide el Reto 1: alta de una paciente ficticia, búsqueda con detección de coincidencia, segunda visita con historial, trabajo sin conexión verificable y explicación del control de acceso. Son unas 300 palabras habladas.
 
@@ -23,8 +23,8 @@ Hilo (versión de Jorge): planear la visita en el panel → el teléfono se prep
 | 0:40–1:00 | Activar «Simular sin señal» → Buscar → Escanear → Ejemplo «Eulalia, marzo 2025» → aparece Eulalia García Luna → «Es ella» | «Martes, nueve y cuarenta, en la sierra. Se va la señal y no pasa nada: los datos ya están aquí. Llega una cara conocida, Eulalia García Luna, de 67 años, con su hoja de 2025. Rocío la escanea y la app la reconoce aunque venga escrita distinto. Rocío confirma; la app nunca une expedientes sola.» |
 | 1:00–1:18 | Expediente como Enfermería (candado) → rol Médico → BI-RADS 4 de 2025 → Agregar estudio → «Leer hoja» → «Hoja de hoy: Eulalia» → Guardar | «Rocío no ve resultados; el médico sí. Ve el BI-RADS 4 de 2025 y la referencia a Huajuapan que nunca se cerró. Le toma foto a la hoja de hoy y la app llena BI-RADS 4, la referencia y la nota. Él revisa y guarda: no se crea otra paciente, se actualiza la que ya existía.» |
 | 1:18–1:38 | Jornada «pendientes» → apagar «Simular sin señal» → se sincroniza solo | «Jueves, seis y veinte. La camioneta llega a Juxtlahuaca, vuelve la señal y la app sincroniza sola. Si la señal se corta a la mitad, no pasa nada: cada registro lleva una llave y Valkey no aplica dos veces el mismo. Eulalia entra sola a la lista de seguimiento.» |
-| 1:38–1:55 | Panel → Tablero San Martín Peras → Patología → Seguimiento | «Viernes, de vuelta en Ciudad Guzmán. Coordinación ve lo que trajo la brigada, el patólogo interpreta los papanicolaous que quedaron en laboratorio y Eulalia aparece en seguimiento para que alguien la llame. Cada paso queda en la bitácora, sin datos clínicos.» |
-| 1:55–2:00 | Diapositiva de arquitectura | «El código es público, con licencia MIT.» |
+| 1:38–1:50 | Panel → Tablero San Martín Peras → Patología → Seguimiento | «Viernes, en Ciudad Guzmán. Coordinación ve lo que trajo la brigada, el patólogo interpreta los papanicolaous en laboratorio y Eulalia aparece en seguimiento para que alguien la llame.» |
+| 1:50–2:00 | Diapositiva «Lo que pidió EIRA» | «Eso cubre lo que pidió EIRA: identificador estable, coincidencias que confirma una persona, captura sin señal, sincronización con conflictos, visitas aparte, roles y bitácora. El código es público, con licencia MIT.» |
 
 ## Si preguntan
 
