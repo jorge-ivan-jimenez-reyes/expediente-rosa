@@ -166,7 +166,7 @@ final class Sincronizador {
     /// No lanza: sin señal no hace nada; si la API no tiene `/jornadas` (404) deja la lista vacía.
     /// Devuelve true si todas quedaron listas.
     @discardableResult
-    func prepararProximas(dias: Int = 7) async -> Bool {
+    func prepararProximas(dias: Int = 30) async -> Bool {
         guard enLinea, !preparandoProximas else { return false }
         preparandoProximas = true
         defer { preparandoProximas = false }
