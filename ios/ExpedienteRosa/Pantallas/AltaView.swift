@@ -38,6 +38,12 @@ struct AltaView: View {
           ScrollViewReader { lector in
             ScrollView {
                 VStack(spacing: Tema.Espacio.l) {
+                    HStack(spacing: Tema.Espacio.m) {
+                        Mascota(estado: .saluda, tamano: 52)
+                        Text("Primera visita. Pedimos lo mínimo: nombre, edad, comunidad y su firma.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                    }
                     Tarjeta {
                         CampoTexto(titulo: "Nombre", texto: $nombre)
                         Renglon {

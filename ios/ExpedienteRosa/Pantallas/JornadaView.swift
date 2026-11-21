@@ -99,8 +99,7 @@ struct JornadaView: View {
         if sync.sincronizando || sync.preparandoProximas || preparando { return .buscando }
         if !sync.enLinea { return .sinSenal }
         if celebrando { return .contenta }
-        if sync.proximasJornadas.isEmpty { return .reposo }
-        return nil
+        return .reposo   // siempre acompaña: reposa y parpadea
     }
 
     /// Bajar una comunidad a mano. Si coordinación programó jornadas, queda plegado como respaldo.

@@ -18,6 +18,17 @@ struct EscanearView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Tema.Espacio.l) {
                     selector
+                    if imagen == nil && !leyendo {
+                        VStack(spacing: Tema.Espacio.s) {
+                            Mascota(estado: .saluda, tamano: 96)
+                            Text("Hoja completa, con buena luz y sin sombras.\nLa app la lee aquí mismo, sin señal.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, Tema.Espacio.xl)
+                        .transition(.opacity)
+                    }
                     if leyendo {
                         HStack(spacing: Tema.Espacio.s) {
                             Mascota(estado: .buscando, tamano: 44)
