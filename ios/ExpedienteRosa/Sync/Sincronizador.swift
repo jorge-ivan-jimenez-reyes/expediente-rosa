@@ -186,14 +186,21 @@ final class Sincronizador {
                 let resultado = Resultado(rawValue: e.resultado) ?? .pendiente
                 let fecha = Fechas.leer(e.fecha) ?? .now
                 let conducta = e.conducta.flatMap(Conducta.init(rawValue:))
+                let etapa = e.etapa.flatMap(Etapa.init(rawValue:))
                 if let ya = estudioPorId[e.id] {
                     ya.pacienteId = e.pacienteId; ya.tipo = tipo; ya.resultado = resultado
                     ya.fecha = fecha; ya.nota = e.nota; ya.registradoPor = e.registradoPor
                     ya.visitaId = e.visitaId; ya.clasificacion = e.clasificacion; ya.conducta = conducta
+                    // Etapa: la del servidor gana si viene (el patólogo la mueve en el panel); si no, se queda la local.
+                    if let etapa { ya.etapa = etapa }
+                    if let por = e.interpretadoPor { ya.interpretadoPor = por }
+                    if let en = Fechas.leer(e.interpretadoEn) { ya.interpretadoEn = en }
                 } else {
                     let nuevo = Estudio(id: e.id, pacienteId: e.pacienteId, tipo: tipo, fecha: fecha,
                                         resultado: resultado, nota: e.nota, registradoPor: e.registradoPor,
-                                        visitaId: e.visitaId, clasificacion: e.clasificacion, conducta: conducta)
+                                        visitaId: e.visitaId, clasificacion: e.clasificacion, conducta: conducta,
+                                        etapa: etapa, interpretadoPor: e.interpretadoPor,
+                                        interpretadoEn: Fechas.leer(e.interpretadoEn))
                     contexto.insert(nuevo)
                     estudioPorId[e.id] = nuevo
                 }
@@ -204,9 +211,11 @@ final class Sincronizador {
                 if let ya = visitaPorId[v.id] {
                     ya.pacienteId = v.pacienteId; ya.fecha = fecha; ya.comunidad = v.comunidad
                     ya.motivo = v.motivo; ya.registradaPor = v.registradaPor
+                    if let estado = v.estado { ya.estado = estado }
+                    if let jornada = v.jornada { ya.jornada = jornada }
                 } else {
                     let nueva = Visita(id: v.id, pacienteId: v.pacienteId, fecha: fecha, comunidad: v.comunidad,
-                                       motivo: v.motivo, registradaPor: v.registradaPor)
+                                       motivo: v.motivo, registradaPor: v.registradaPor, estado: v.estado, jornada: v.jornada)
                     contexto.insert(nueva)
                     visitaPorId[v.id] = nueva
                 }

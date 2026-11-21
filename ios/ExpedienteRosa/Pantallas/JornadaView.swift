@@ -4,6 +4,8 @@ import SwiftUI
 struct JornadaView: View {
     @Environment(Sincronizador.self) private var sync
     @AppStorage("comunidad") private var comunidad = ""
+    /// Entidad federativa de la jornada. Va en cada visita nueva junto con «comunidad · mes año».
+    @AppStorage("estado") private var entidad = ""
     @AppStorage("api_url") private var apiURL = Config.apiURL.absoluteString
     @State private var resultado: ResultadoSync?
     @State private var preparadas: Int?
@@ -83,6 +85,7 @@ struct JornadaView: View {
             Text("Preparar jornada").font(.seccion)
             Text("Baja al teléfono las pacientes de la comunidad antes de salir.")
                 .font(.nota).foregroundStyle(.secondary)
+            selectorEstado
             HStack(alignment: .bottom, spacing: Tema.Espacio.m) {
                 CampoTexto(titulo: "Comunidad", texto: $comunidad)
                 Button {
@@ -105,6 +108,25 @@ struct JornadaView: View {
             }
         }
         .animation(Tema.resorte, value: preparadas)
+    }
+
+    private var selectorEstado: some View {
+        VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
+            Text("Estado").font(.nota).foregroundStyle(.secondary)
+            Picker("Estado", selection: $entidad) {
+                Text("Sin elegir").tag("")
+                Divider()
+                ForEach(Entidades.todas.prefix(3), id: \.self) { Text($0).tag($0) }
+                Divider()
+                ForEach(Entidades.todas.dropFirst(3), id: \.self) { Text($0).tag($0) }
+            }
+            .pickerStyle(.menu)
+            .tint(entidad.isEmpty ? .secondary : .primary)
+            .font(.cuerpo)
+            .frame(maxWidth: .infinity, minHeight: Tema.toque, alignment: .leading)
+            .padding(.horizontal, Tema.Espacio.xs)
+            .background(Tema.campo, in: .rect(cornerRadius: Tema.Radio.campo))
+        }
     }
 
     private func tarjetaResultado(_ r: ResultadoSync) -> some View {

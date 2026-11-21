@@ -151,18 +151,26 @@ enum ModoCaptura {
                             municipio: "San Martín Peras, Oaxaca", consentimiento: hace(620), creadaPor: "enf-jux", creada: hace(620))
         if pantalla != "editar" { lupe.idEira = "EIRA-0142"; lupe.entidadNacimiento = "Oaxaca"; lupe.version = 2 }
         ctx.insert(lupe)
-        // Dos visitas anteriores; los estudios cuelgan de su visita.
-        let v1 = Visita(pacienteId: lupe.id, fecha: hace(620), comunidad: "San Martín Peras", motivo: "jornada de tamizaje", registradaPor: "enf-jux")
-        let v2 = Visita(pacienteId: lupe.id, fecha: hace(252), comunidad: "Juxtlahuaca", motivo: "jornada de tamizaje", registradaPor: "enf-jux")
-        ctx.insert(v1); ctx.insert(v2)
-        let estudios: [(TipoEstudio, Visita, Resultado, String?, String?, Conducta?)] = [
-            (.ultrasonido, v2, .anormal, "Nódulo de 8 mm en mama izquierda.", "BI-RADS 3", .evaluacion6Meses),
-            (.papanicolaou, v2, .pendiente, nil, nil, nil),
-            (.mastografia, v1, .normal, nil, "BI-RADS 1", .rutina1Anio),
+        // Tres visitas; los estudios cuelgan de su visita. La de hace 2 días es de esta jornada.
+        func visita(_ dias: Int, _ comunidad: String) -> Visita {
+            Visita(pacienteId: lupe.id, fecha: hace(dias), comunidad: comunidad, motivo: "jornada de tamizaje", registradaPor: "enf-jux",
+                   estado: "Oaxaca", jornada: Repositorio.nombreJornada(comunidad: comunidad, fecha: hace(dias)))
+        }
+        let v1 = visita(620, "San Martín Peras"), v2 = visita(252, "Juxtlahuaca"), v3 = visita(2, "San Martín Peras")
+        v1.estado = nil; v1.jornada = nil   // la primera es de antes de que hubiera etapas y jornadas
+        ctx.insert(v1); ctx.insert(v2); ctx.insert(v3)
+        // Etapas: hoy en laboratorio y tomado; la visita pasada, interpretado por la patóloga (falta avisar) y avisada.
+        let estudios: [(TipoEstudio, Visita, Resultado, String?, String?, Conducta?, Etapa?, String?)] = [
+            (.papanicolaou, v3, .pendiente, nil, nil, nil, .enLaboratorio, nil),
+            (.mastografia, v3, .pendiente, nil, nil, nil, .tomado, nil),
+            (.ultrasonido, v2, .anormal, "Nódulo de 8 mm en mama izquierda.", "BI-RADS 3", .evaluacion6Meses, .avisado, "med-jux"),
+            (.papanicolaou, v2, .normal, nil, "Bethesda: NILM", .rutina1Anio, .interpretado, "Dra. Elena Ruiz"),
+            (.mastografia, v1, .normal, nil, "BI-RADS 1", .rutina1Anio, nil, nil),
         ]
-        for (t, v, r, n, c, cd) in estudios {
+        for (t, v, r, n, c, cd, et, por) in estudios {
             ctx.insert(Estudio(pacienteId: lupe.id, tipo: t, fecha: v.fecha, resultado: r, nota: n, registradoPor: "med-jux",
-                               visitaId: v.id, clasificacion: c, conducta: cd))
+                               visitaId: v.id, clasificacion: c, conducta: cd, etapa: et, interpretadoPor: por,
+                               interpretadoEn: por == nil ? nil : v.fecha.addingTimeInterval(9 * 86_400)))
         }
 
         let otras: [(String, String, String, String?, Int, String, String)] = [
@@ -205,6 +213,7 @@ struct RaizCaptura: View {
         var args = d.volatileDomain(forName: UserDefaults.argumentDomain)
         args["rol"] = ModoCaptura.rol.rawValue
         args["comunidad"] = "San Martín Peras"
+        args["estado"] = "Oaxaca"
         d.setVolatileDomain(args, forName: UserDefaults.argumentDomain)
         let c = ModoCaptura.contenedor()
         // Servidor inexistente: el modo captura nunca toca la red.

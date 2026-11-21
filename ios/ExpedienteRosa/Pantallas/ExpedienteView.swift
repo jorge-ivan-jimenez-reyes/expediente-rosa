@@ -214,9 +214,14 @@ struct FilaEstudio: View {
                     Text(estudio.tipo.nombre).font(.seccion)
                     Spacer()
                 }
+                // La etapa la ven todos (no es dato clínico); el resultado, solo quien tiene permiso.
+                if veResultado || estudio.etapa != nil {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: Tema.Espacio.s) { chips }
+                        VStack(alignment: .leading, spacing: Tema.Espacio.xs) { chips }
+                    }
+                }
                 if veResultado {
-                    Chip(texto: estudio.resultado.nombre, icono: Tema.icono(estudio.resultado),
-                         color: Tema.color(estudio.resultado))
                     if let detalle = detalleClinico {
                         Text(detalle).font(.nota.weight(.semibold))
                     }
@@ -227,6 +232,19 @@ struct FilaEstudio: View {
             .padding(.bottom, ultima ? 0 : Tema.Espacio.l)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+extension FilaEstudio {
+    @ViewBuilder fileprivate var chips: some View {
+        if veResultado {
+            Chip(texto: estudio.resultado.nombre, icono: Tema.icono(estudio.resultado),
+                 color: Tema.color(estudio.resultado))
+        }
+        if let etapa = estudio.etapa, let texto = estudio.etapaTexto {
+            Chip(texto: texto, icono: Tema.icono(etapa), color: Tema.color(etapa))
+                .accessibilityLabel("Etapa: \(texto)")
+        }
     }
 }
 

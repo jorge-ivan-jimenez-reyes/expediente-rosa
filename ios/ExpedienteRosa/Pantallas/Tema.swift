@@ -81,6 +81,18 @@ enum Tema {
         }
     }
 
+    /// Etapa del estudio. No es un resultado: va sin colores de estado (rosa solo cuando falta avisarle a la paciente).
+    static func icono(_ e: Etapa) -> String {
+        switch e {
+        case .tomado: "tray"
+        case .enLaboratorio: "flask"
+        case .interpretado: "checkmark.seal"
+        case .avisado: "bell"
+        }
+    }
+
+    static func color(_ e: Etapa) -> Color { e == .interpretado ? rosa : .secondary }
+
     private static func dinamico(_ claro: UInt32, _ oscuro: UInt32) -> Color {
         Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: oscuro) : UIColor(hex: claro) })
     }
@@ -114,6 +126,19 @@ extension Resultado {
         case .pendiente: "Pendiente"
         case .normal: "Normal"
         case .anormal: "Anormal"
+        }
+    }
+}
+
+extension Estudio {
+    /// Texto corto de la etapa: «En laboratorio», «Interpretado por Dra. Ruiz», «Avisada».
+    var etapaTexto: String? {
+        switch etapa {
+        case nil: nil
+        case .tomado: "Tomado"
+        case .enLaboratorio: "En laboratorio"
+        case .interpretado: interpretadoPor.flatMap { $0.hasPrefix("ios-") ? nil : "Interpretado por \($0)" } ?? "Interpretado"
+        case .avisado: "Avisada"
         }
     }
 }

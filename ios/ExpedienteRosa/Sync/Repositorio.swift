@@ -30,9 +30,31 @@ struct Repositorio {
     var autor: String
     /// Se llama después de cada escritura (el Sincronizador lo usa para contar pendientes).
     var alCambiar: (@MainActor () -> Void)?
+    /// Jornada en curso, elegida en «Antes de salir» (AppStorage "comunidad" y "estado"). Va en cada visita nueva.
+    var comunidadJornada: String?
+    var estadoJornada: String?
 
-    init(contexto: ModelContext, autor: String = Config.dispositivo, alCambiar: (@MainActor () -> Void)? = nil) {
+    init(contexto: ModelContext, autor: String = Config.dispositivo, alCambiar: (@MainActor () -> Void)? = nil,
+         comunidadJornada: String? = UserDefaults.standard.string(forKey: "comunidad"),
+         estadoJornada: String? = UserDefaults.standard.string(forKey: "estado")) {
         self.contexto = contexto; self.autor = autor; self.alCambiar = alCambiar
+        self.comunidadJornada = comunidadJornada?.limpio.nilSiVacio
+        self.estadoJornada = estadoJornada?.limpio.nilSiVacio
+    }
+
+    /// «San Martín Peras · noviembre 2026»: comunidad de la jornada (o la de la paciente) y el mes.
+    nonisolated static func nombreJornada(comunidad: String, fecha: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_MX")
+        f.dateFormat = "LLLL yyyy"
+        return "\(comunidad) · \(f.string(from: fecha))"
+    }
+
+    /// Visita nueva con la entidad y el nombre de la jornada en curso.
+    private func nuevaVisita(_ p: Paciente, fecha: Date, motivo: String?) -> Visita {
+        Visita(pacienteId: p.id, fecha: fecha, comunidad: p.comunidad, motivo: motivo, registradaPor: autor,
+               estado: estadoJornada,
+               jornada: Self.nombreJornada(comunidad: comunidadJornada ?? p.comunidad, fecha: fecha))
     }
 
     /// Guarda la paciente y encola el evento "alta". Valida lo mismo que la API para que la cola nunca se atore.
@@ -71,13 +93,16 @@ struct Repositorio {
         if let ya = visita(de: p, dia: e.fecha) {
             delDia = ya
         } else {
-            delDia = Visita(pacienteId: p.id, fecha: e.fecha, comunidad: p.comunidad, motivo: "jornada de tamizaje", registradaPor: autor)
+            delDia = nuevaVisita(p, fecha: e.fecha, motivo: "jornada de tamizaje")
             registros.append(delDia)
             eventos.append(EventoPendiente(tipo: "visita", payload: try JSONEncoder().encode(delDia.dto)))
         }
+        let etapa = Etapa.alGuardar(e.tipo, e.resultado)
         let estudio = Estudio(pacienteId: p.id, tipo: e.tipo, fecha: e.fecha, resultado: e.resultado,
                               nota: nota, registradoPor: autor, visitaId: delDia.id,
-                              clasificacion: clasificacion, conducta: e.conducta)
+                              clasificacion: clasificacion, conducta: e.conducta, etapa: etapa,
+                              interpretadoPor: etapa == .interpretado ? autor : nil,
+                              interpretadoEn: etapa == .interpretado ? .now : nil)
         registros.append(estudio)
         // La visita va antes en la cola (se ordena por `creado`).
         eventos.append(EventoPendiente(tipo: "estudio", payload: try JSONEncoder().encode(estudio.dto),
@@ -92,7 +117,7 @@ struct Repositorio {
         let motivo = motivo?.limpio.nilSiVacio
         if let motivo, motivo.count > 200 { throw Falla.motivoLargo }
         if let ya = visita(de: p, dia: .now) { return ya }
-        let v = Visita(pacienteId: p.id, fecha: .now, comunidad: p.comunidad, motivo: motivo, registradaPor: autor)
+        let v = nuevaVisita(p, fecha: .now, motivo: motivo)
         try guardar([v], [EventoPendiente(tipo: "visita", payload: try JSONEncoder().encode(v.dto))])
         return v
     }

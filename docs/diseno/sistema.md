@@ -61,6 +61,7 @@ Estrategia contenida: neutros del sistema + un solo acento rosa. Los colores de 
 |---|---|
 | Normal / Anormal / Pendiente | checkmark.circle.fill / exclamationmark.triangle.fill / clock.fill |
 | Mastografía / Ultrasonido / Papanicolaou / Exploración | circle.circle / waveform / testtube.2 / hand.raised |
+| Etapa: Tomado / En laboratorio / Interpretado / Avisada (gris; rosa solo «Interpretado», falta avisar) | tray / flask / checkmark.seal / bell |
 | Escrito por la IA del teléfono | apple.intelligence (solo ahí) |
 | Señal | antenna.radiowaves.left.and.right(.slash) |
 

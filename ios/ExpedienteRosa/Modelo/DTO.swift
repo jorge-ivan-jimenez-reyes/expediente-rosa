@@ -35,6 +35,10 @@ struct EstudioDTO: Codable, Sendable, Hashable {
     var visitaId: String? = nil
     var clasificacion: String? = nil
     var conducta: String? = nil   // rutina-1-anio | mastografia-tamizaje | imagen-complementaria | evaluacion-6-meses | referencia
+    // Etapa (el patólogo interpreta en el panel web)
+    var etapa: String? = nil      // tomado | en-laboratorio | interpretado | avisado
+    var interpretadoPor: String? = nil
+    var interpretadoEn: String? = nil   // ISO 8601
 }
 
 struct VisitaDTO: Codable, Sendable, Hashable {
@@ -44,6 +48,8 @@ struct VisitaDTO: Codable, Sendable, Hashable {
     var comunidad: String
     var motivo: String?
     var registradaPor: String
+    var estado: String? = nil     // entidad federativa de la jornada
+    var jornada: String? = nil    // «<comunidad> · <mes año>»
 }
 
 /// Valor de un campo editable de la paciente: texto o número (edad).
@@ -193,13 +199,14 @@ extension Estudio {
     var dto: EstudioDTO {
         EstudioDTO(id: id, pacienteId: pacienteId, tipo: tipoRaw, fecha: ISO.texto(fecha), resultado: resultadoRaw,
                    nota: nota, registradoPor: registradoPor, visitaId: visitaId, clasificacion: clasificacion,
-                   conducta: conductaRaw)
+                   conducta: conductaRaw, etapa: etapaRaw, interpretadoPor: interpretadoPor,
+                   interpretadoEn: interpretadoEn.map(ISO.texto))
     }
 }
 
 extension Visita {
     var dto: VisitaDTO {
         VisitaDTO(id: id, pacienteId: pacienteId, fecha: ISO.texto(fecha), comunidad: comunidad, motivo: motivo,
-                  registradaPor: registradaPor)
+                  registradaPor: registradaPor, estado: estado, jornada: jornada)
     }
 }

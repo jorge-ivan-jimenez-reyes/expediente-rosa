@@ -85,17 +85,24 @@ final class Estudio {
     var visitaId: String?
     var clasificacion: String?
     var conductaRaw: String?
+    // Etapa del estudio (el patólogo interpreta los papanicolaous en el panel web). Opcionales: SwiftData migra sola.
+    var etapaRaw: String? = nil
+    var interpretadoPor: String? = nil
+    var interpretadoEn: Date? = nil
 
+    var etapa: Etapa? { get { etapaRaw.flatMap(Etapa.init(rawValue:)) } set { etapaRaw = newValue?.rawValue } }
     var conducta: Conducta? { get { conductaRaw.flatMap(Conducta.init(rawValue:)) } set { conductaRaw = newValue?.rawValue } }
     var tipo: TipoEstudio { get { TipoEstudio(rawValue: tipoRaw) ?? .exploracion } set { tipoRaw = newValue.rawValue } }
     var resultado: Resultado { get { Resultado(rawValue: resultadoRaw) ?? .pendiente } set { resultadoRaw = newValue.rawValue } }
 
     init(id: String = UUID().uuidString, pacienteId: String, tipo: TipoEstudio, fecha: Date = .now,
          resultado: Resultado = .pendiente, nota: String? = nil, registradoPor: String,
-         visitaId: String? = nil, clasificacion: String? = nil, conducta: Conducta? = nil) {
+         visitaId: String? = nil, clasificacion: String? = nil, conducta: Conducta? = nil,
+         etapa: Etapa? = nil, interpretadoPor: String? = nil, interpretadoEn: Date? = nil) {
         self.id = id; self.pacienteId = pacienteId; self.tipoRaw = tipo.rawValue; self.fecha = fecha
         self.resultadoRaw = resultado.rawValue; self.nota = nota; self.registradoPor = registradoPor
         self.visitaId = visitaId; self.clasificacion = clasificacion; self.conductaRaw = conducta?.rawValue
+        self.etapaRaw = etapa?.rawValue; self.interpretadoPor = interpretadoPor; self.interpretadoEn = interpretadoEn
     }
 }
 
@@ -108,12 +115,41 @@ final class Visita {
     var comunidad: String
     var motivo: String?
     var registradaPor: String
+    /// Entidad federativa de la jornada («Jalisco») y su nombre («Tuxpan · noviembre 2026»). Opcionales: SwiftData migra sola.
+    var estado: String? = nil
+    var jornada: String? = nil
 
     init(id: String = UUID().uuidString, pacienteId: String, fecha: Date = .now, comunidad: String,
-         motivo: String? = nil, registradaPor: String) {
+         motivo: String? = nil, registradaPor: String, estado: String? = nil, jornada: String? = nil) {
         self.id = id; self.pacienteId = pacienteId; self.fecha = fecha; self.comunidad = comunidad
-        self.motivo = motivo; self.registradaPor = registradaPor
+        self.motivo = motivo; self.registradaPor = registradaPor; self.estado = estado; self.jornada = jornada
     }
+}
+
+/// Dónde va el estudio: tomado → en laboratorio → interpretado → avisado a la paciente. Mismos valores que la API.
+/// No es dato clínico: enfermería la ve (el resultado no).
+enum Etapa: String, CaseIterable, Codable, Sendable {
+    case tomado
+    case enLaboratorio = "en-laboratorio"
+    case interpretado
+    case avisado
+
+    /// La que pone el teléfono al guardar: el papanicolaou pendiente se va al laboratorio;
+    /// con resultado ya está interpretado; otro estudio pendiente solo quedó tomado.
+    static func alGuardar(_ tipo: TipoEstudio, _ resultado: Resultado) -> Etapa {
+        if resultado != .pendiente { return .interpretado }
+        return tipo == .papanicolaou ? .enLaboratorio : .tomado
+    }
+}
+
+/// Las 32 entidades federativas. Primero las de las jornadas de EIRA.
+enum Entidades {
+    static let todas = ["Jalisco", "Oaxaca", "Guerrero",
+                        "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas", "Chihuahua",
+                        "Ciudad de México", "Coahuila", "Colima", "Durango", "Estado de México", "Guanajuato", "Hidalgo",
+                        "Michoacán", "Morelos", "Nayarit", "Nuevo León", "Puebla", "Querétaro", "Quintana Roo",
+                        "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz",
+                        "Yucatán", "Zacatecas"]
 }
 
 /// Conducta a seguir después del estudio. Mismos valores que el enum de la API.
