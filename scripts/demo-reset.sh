@@ -16,7 +16,9 @@ if docker ps --format '{{.Names}}' | grep -q '^eira-expediente-api-1$'; then
   docker restart eira-expediente-api-1 >/dev/null
 else
   pkill -f "tsx src/index.ts" 2>/dev/null || true
-  (cd api && PORT=8787 nohup npx tsx src/index.ts > /tmp/eira-api.log 2>&1 &)
+  sleep 1
+  # Sin heredar stdin/stdout del script: si no, el script se queda esperando a la API.
+  (cd api && PORT=8787 nohup npx tsx src/index.ts </dev/null >/tmp/eira-api.log 2>&1 & disown) </dev/null >/dev/null 2>&1
 fi
 for _ in $(seq 1 40); do curl -sf "$API/salud" >/dev/null && break; sleep 0.5; done
 curl -sf "$API/salud" >/dev/null || { echo "La API no respondió; revisa /tmp/eira-api.log"; exit 1; }
