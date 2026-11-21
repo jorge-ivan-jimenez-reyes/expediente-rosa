@@ -58,7 +58,7 @@ struct Pestanas: View {
     var body: some View {
         TabView(selection: $pestana) {
             Tab("Buscar", systemImage: "magnifyingglass", value: "buscar") {
-                BuscarView()
+                BuscarView(irAJornada: { pestana = "jornada" })
             }
             Tab("Jornada", systemImage: "antenna.radiowaves.left.and.right", value: "jornada") {
                 JornadaView()

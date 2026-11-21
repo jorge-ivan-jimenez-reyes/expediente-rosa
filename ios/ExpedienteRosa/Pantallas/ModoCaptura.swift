@@ -7,11 +7,11 @@ import UIKit
 /// FICTICIOS en un ModelContainer en memoria, sin red. Sirve para sacar capturas con
 /// `xcrun simctl io … screenshot` sin tocar el simulador.
 ///
-/// Pantallas: buscar, buscar-resultados, alta, expediente, expediente-medico, escanear, jornada, jornada-pendiente, revision,
+/// Pantallas: buscar, buscar-resultados, buscar-hoja, buscar-vacia, alta, expediente, expediente-medico, escanear, jornada, jornada-pendiente, revision,
 /// y del Reto 1: editar, estudio, revision-conflictos, revision-seguimiento, bitacora.
 @MainActor
 enum ModoCaptura {
-    static let pantallas = ["buscar", "buscar-resultados", "alta", "expediente", "expediente-medico",
+    static let pantallas = ["buscar", "buscar-resultados", "buscar-hoja", "buscar-vacia", "alta", "expediente", "expediente-medico",
                             "escanear", "jornada", "jornada-pendiente", "revision",
                             "editar", "estudio", "revision-conflictos", "revision-seguimiento", "bitacora"]
 
@@ -69,6 +69,10 @@ enum ModoCaptura {
     /// Búsqueda ya escrita para `buscar-resultados`: la misma señora, escrita distinto.
     static let consulta = NuevaPaciente(nombre: "Ma. Guadalupe", apellidoPaterno: "Hdz", apellidoMaterno: "Velasquez",
                                         nacimiento: nil, edad: 51, comunidad: "San Martín Peras", municipio: nil)
+
+    /// `buscar-hoja`: lo que dejó una hoja escaneada en la búsqueda.
+    static let hojaBuscar = NuevaPaciente(nombre: "María Guadalupe", apellidoPaterno: "Hernández", apellidoMaterno: "Velázquez",
+                                          nacimiento: "1975-05-11", edad: nil, comunidad: "San Martín Peras", municipio: nil)
 
     /// Lo que la enfermera ya escribió antes de tocar «Es nueva».
     static let altaInicial = NuevaPaciente(nombre: "Rosa Isela", apellidoPaterno: "Chávez", apellidoMaterno: "Ortiz",
@@ -230,7 +234,8 @@ struct RaizCaptura: View {
         let d = UserDefaults.standard
         var args = d.volatileDomain(forName: UserDefaults.argumentDomain)
         args["rol"] = ModoCaptura.rol.rawValue
-        args["comunidad"] = "San Martín Peras"
+        // `buscar-vacia`: una comunidad que todavía no se baja al teléfono.
+        args["comunidad"] = ModoCaptura.pantalla == "buscar-vacia" ? "Cochoapa el Grande" : "San Martín Peras"
         args["estado"] = "Oaxaca"
         d.setVolatileDomain(args, forName: UserDefaults.argumentDomain)
         let c = ModoCaptura.contenedor()

@@ -43,7 +43,7 @@ struct EscanearView: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cerrar") { cerrar() } } }
             .safeAreaInset(edge: .bottom) {
                 if let p = hoja?.paciente {
-                    BotonPrincipal(titulo: "Dar de alta", icono: "person.badge.plus") { alConfirmar(p) }
+                    BotonPrincipal(titulo: "Buscar paciente", icono: "magnifyingglass") { alConfirmar(p) }
                         .padding(.horizontal, Tema.Espacio.l).padding(.bottom, Tema.Espacio.s)
                 }
             }

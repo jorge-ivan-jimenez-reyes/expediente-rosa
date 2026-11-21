@@ -245,6 +245,8 @@ struct CampoTexto: View {
     var titulo: String
     @Binding var texto: String
     var teclado: UIKeyboardType = .default
+    /// En rosa suave cuando el valor vino de una hoja escaneada y sigue sin cambiar.
+    var resaltado = false
     var body: some View {
         VStack(alignment: .leading, spacing: Tema.Espacio.xs) {
             Text(titulo).font(.nota).foregroundStyle(.secondary)
@@ -255,7 +257,8 @@ struct CampoTexto: View {
                 .autocorrectionDisabled()
                 .padding(.horizontal, Tema.Espacio.m)
                 .frame(minHeight: Tema.toque)
-                .background(Tema.campo, in: .rect(cornerRadius: Tema.Radio.campo))
+                .background(resaltado ? Tema.rosaSuave : Tema.campo, in: .rect(cornerRadius: Tema.Radio.campo))
+                .animation(Tema.resorte, value: resaltado)
                 .accessibilityLabel(titulo)
         }
     }
