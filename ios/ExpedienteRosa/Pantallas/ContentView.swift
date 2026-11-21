@@ -70,6 +70,14 @@ struct Pestanas: View {
         }
         .tint(Tema.rosa)
         .tabBarMinimizeBehavior(.onScrollDown)
+        // Con la app abierta y con señal, revisa cada 10 s si coordinación programó o cambió una jornada
+        // en el panel, y baja sus pacientes. Sin señal no hace nada.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                if sync.enLinea { _ = await sync.prepararProximas() }
+            }
+        }
     }
 }
 
