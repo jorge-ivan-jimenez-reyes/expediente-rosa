@@ -176,7 +176,7 @@
     if (ruta === 'jornadas') limpiar = await vistaJornadas(vista) || limpiar;
     if (ruta === 'patologia') limpiar = await vistaPatologia(vista, q) || limpiar;
     if (ruta === 'seguimiento') limpiar = await vistaSeguimiento(vista, q) || limpiar;
-    if (ruta === 'bitacora') limpiar = await vistaBitacora(vista) || limpiar;
+    if (ruta === 'bitacora') limpiar = await vistaBitacora(vista, q) || limpiar;
     if (ruta === 'asistente') limpiar = await vistaAsistente(vista, q) || limpiar;
     if (ruta === 'tablero' || ruta === 'bitacora') vista.append(botonPreguntar(q));
   }
@@ -1017,31 +1017,404 @@
     'jornada-cancelada': 'Canceló una jornada',
     'consulta-asistente': 'Consultó al asistente',
   };
-  async function vistaBitacora(vista) {
-    document.title = 'Bitácora · Expediente Rosa';
-    let limite = 50;
-    const meta = h('span', {}, 'Quién hizo qué y cuándo. Sin datos clínicos.');
-    const ejemplo = h('span', { class: 'pildora ejemplo', hidden: true }, h('span', { class: 'punto' }), 'Datos de ejemplo');
-    const cuerpo = h('section', { class: 'panel bitacora' }, h('p', { class: 'cargando' }, 'Cargando…'));
-    vista.append(h('div', { class: 'encabezado' }, h('div', {}, h('h1', {}, 'Bitácora'), h('p', { class: 'meta' }, meta, ejemplo))), cuerpo);
+  // Cada tipo cae en un grupo: el grupo da el ícono, la cifra del resumen y el filtro.
+  // `siempre`: aparece en el resumen aunque vaya en cero (las cifras que coordinación revisa).
+  const GRUPOS = [
+    { id: 'alta', nombre: 'Altas', uno: 'alta', varios: 'altas', tipos: ['alta'], siempre: true },
+    { id: 'visita', nombre: 'Visitas', uno: 'visita', varios: 'visitas', tipos: ['visita'], siempre: true },
+    { id: 'estudio', nombre: 'Estudios', uno: 'estudio', varios: 'estudios', tipos: ['estudio'], siempre: true },
+    { id: 'interpretacion', nombre: 'Interpretaciones', uno: 'interpretación', varios: 'interpretaciones', tipos: ['interpretacion', 'estudio-interpretado'], siempre: true },
+    { id: 'avisado', nombre: 'Avisos', uno: 'aviso', varios: 'avisos', tipos: ['avisado', 'estudio-avisado', 'seguimiento-atendido'], siempre: true },
+    { id: 'duplicado', nombre: 'Duplicados resueltos', uno: 'duplicado resuelto', varios: 'duplicados resueltos', tipos: ['duplicado-unir', 'duplicado-separar'], siempre: true },
+    { id: 'conflicto', nombre: 'Conflictos', uno: 'conflicto', varios: 'conflictos', tipos: ['conflicto', 'conflicto-aceptar', 'conflicto-rechazar'], siempre: true },
+    { id: 'jornada', nombre: 'Jornadas programadas', uno: 'jornada programada', varios: 'jornadas programadas', tipos: ['jornada-programada'], siempre: true },
+    { id: 'jornada-cancelada', nombre: 'Jornadas canceladas', uno: 'jornada cancelada', varios: 'jornadas canceladas', tipos: ['jornada-cancelada'] },
+    { id: 'actualizacion', nombre: 'Correcciones', uno: 'corrección', varios: 'correcciones', tipos: ['actualizacion'] },
+    { id: 'asistente', nombre: 'Consultas al asistente', uno: 'consulta al asistente', varios: 'consultas al asistente', tipos: ['consulta-asistente'] },
+    { id: 'otro', nombre: 'Otros', uno: 'otro movimiento', varios: 'otros movimientos', tipos: [] },
+  ];
+  const GRUPO_DE = Object.fromEntries(GRUPOS.flatMap((g) => g.tipos.map((t) => [t, g])));
+  const grupoDe = (tipo) => GRUPO_DE[tipo] || GRUPOS[GRUPOS.length - 1];
 
-    async function cargar() {
-      const r = await pedir(`/api/bitacora?limite=${limite}`);
-      if (!r.ok) { cuerpo.replaceChildren(h('p', { class: 'error' }, `No se pudo leer la bitácora (${r.status}).`)); return; }
-      ejemplo.hidden = !r.ejemplo;
-      const filas = r.datos || [];
-      if (!filas.length) { cuerpo.replaceChildren(vacioConMascota('Sin movimientos', 'Aquí aparece cada alta, estudio y aviso que llegue de las brigadas.')); return; }
-      cuerpo.replaceChildren(
-        h('div', { class: 'tabla-caja' }, h('table', {},
-          h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Cuándo'), h('th', { scope: 'col' }, 'Quién'), h('th', { scope: 'col' }, 'Qué'), h('th', { scope: 'col' }, 'Paciente'))),
-          h('tbody', {}, filas.map((f) => h('tr', {},
-            h('td', { class: 'cuando' }, h('time', { datetime: f.cuando }, cuando(f.cuando))),
-            h('td', { class: 'quien-fue' }, f.autor || f.dispositivo || h('span', { class: 'cero' }, 'Sin registro')),
-            h('td', {}, (QUE[f.tipo] || f.tipo), f.campos?.length ? h('span', { class: 'tenue' }, `: ${f.campos.join(', ')}`) : null, f.comunidad ? h('span', { class: 'tenue' }, ` en ${f.comunidad}`) : null),
-            h('td', {}, f.pacienteId ? h('span', { class: 'mono tenue', title: f.pacienteId }, f.folio || f.pacienteId.slice(0, 8).toLowerCase()) : h('span', { class: 'cero' }, '—'))))))),
-        filas.length >= limite && limite < 500 ? h('div', { class: 'mas' }, h('button', { class: 'boton secundario chico', type: 'button', onclick: () => { limite = Math.min(limite * 4, 500); cargar(); } }, 'Ver más')) : null);
+  // Íconos de línea, 16×16, en gris: el color queda para los estados clínicos.
+  const ICONOS_MOV = {
+    alta: '<circle cx="6.5" cy="5" r="2.5"/><path d="M1.75 13.75c.4-2.7 2.3-4.25 4.75-4.25s4.35 1.55 4.75 4.25"/><path d="M12.75 4.5v4.5M10.5 6.75H15"/>',
+    visita: '<path d="M8 14.5S3.5 10.4 3.5 6.75a4.5 4.5 0 0 1 9 0c0 3.65-4.5 7.75-4.5 7.75z"/><circle cx="8" cy="6.75" r="1.6"/>',
+    estudio: '<path d="M5.25 1.75h5.5"/><path d="M6.25 1.75v9.75a1.75 1.75 0 0 0 3.5 0V1.75"/><path d="M6.25 7.25h3.5"/>',
+    interpretacion: '<circle cx="8" cy="8" r="6.25"/><path d="M5.4 8.2l1.8 1.8 3.5-3.7"/>',
+    avisado: '<path d="M3.75 11.5V7.25a4.25 4.25 0 0 1 8.5 0v4.25l1.25 1.25h-11z"/><path d="M6.5 14.5h3"/>',
+    duplicado: '<circle cx="5.75" cy="8" r="4"/><circle cx="10.25" cy="8" r="4"/>',
+    conflicto: '<path d="M2.25 5h10l-2.25-2.25M13.75 11h-10l2.25 2.25"/>',
+    jornada: '<rect x="2.25" y="3.25" width="11.5" height="10.5" rx="2"/><path d="M2.25 6.75h11.5M5.5 1.75v3M10.5 1.75v3"/>',
+    'jornada-cancelada': '<rect x="2.25" y="3.25" width="11.5" height="10.5" rx="2"/><path d="M2.25 6.75h11.5M5.5 1.75v3M10.5 1.75v3M6.25 9l3.5 3.25M9.75 9l-3.5 3.25"/>',
+    actualizacion: '<path d="M10.75 2.25l3 3-8.25 8.25H2.5v-3z"/><path d="M9.25 3.75l3 3"/>',
+    asistente: '<path d="M2.5 3.25h11v7.25h-6l-3 2.5v-2.5h-2z"/>',
+    otro: '<circle cx="8" cy="8" r="6.25"/><circle cx="8" cy="8" r="1" fill="currentColor"/>',
+    lote: '<path d="M8 1.75v7.5M5 6.5l3 3 3-3"/><path d="M2.25 9.75v2.75a1.25 1.25 0 0 0 1.25 1.25h9a1.25 1.25 0 0 0 1.25-1.25V9.75"/>',
+  };
+  const iconoMov = (clave) => {
+    const el = document.createElementNS(SVGNS, 'svg');
+    el.setAttribute('viewBox', '0 0 16 16');
+    el.setAttribute('class', 'icono icono-mov');
+    el.setAttribute('aria-hidden', 'true');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', 'currentColor');
+    el.setAttribute('stroke-width', '1.5');
+    el.setAttribute('stroke-linecap', 'round');
+    el.setAttribute('stroke-linejoin', 'round');
+    el.innerHTML = ICONOS_MOV[clave] || ICONOS_MOV.otro;
+    return el;
+  };
+
+  // El autor tal cual llega. Si es un teléfono sin nombre (ios-xxxx), se dice que es un teléfono.
+  const esTelefono = (a) => /^ios-/i.test(a || '');
+  const quienDe = (f) => f.autor || f.dispositivo || null;
+  const autorTexto = (a) => (!a ? 'Sin registro' : esTelefono(a) ? `Teléfono ${a}` : a);
+  function autorEl(f) {
+    const a = quienDe(f);
+    if (!a) return h('span', { class: 'autor sin' }, 'Sin registro');
+    if (esTelefono(a)) return h('span', { class: 'autor telefono' }, `Teléfono ${a}`);
+    return h('b', { class: 'autor', title: f.dispositivo && f.dispositivo !== a ? `Desde ${f.dispositivo}` : null }, a);
+  }
+  const CAMPOS = { nombre: 'nombre', apellidoPaterno: 'apellido paterno', apellidoMaterno: 'apellido materno', nacimiento: 'fecha de nacimiento', comunidad: 'comunidad', municipio: 'municipio', telefono: 'teléfono', curp: 'CURP' };
+  const enLista = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`);
+
+  // La frase de una fila. `ctx.folio(f)` pinta el folio de la paciente; `ctx.otra(f)` el de la otra ficha;
+  // con `ctx.ella` (panel de una paciente) la paciente ya se sabe y la frase no la repite.
+  function frase(f, ctx) {
+    const F = () => ctx.folio(f), O = () => ctx.otra(f) || 'otra ficha', ella = ctx.ella;
+    const de = () => (ella ? '' : [' de ', F()]);
+    const campos = f.campos?.length ? enLista(f.campos.map((c) => CAMPOS[c] || c)) : null;
+    const lugar = f.comunidad ? [' en ', h('b', { class: 'lugar' }, f.comunidad)] : '';
+    switch (f.tipo) {
+      case 'alta': return ella ? 'la dio de alta' : ['dio de alta a ', F()];
+      case 'visita': return ['registró una visita', de()];
+      case 'estudio': return ['registró un estudio', de()];
+      case 'actualizacion': return ['corrigió ', campos || 'datos', de()];
+      case 'conflicto': return ['mandó un cambio', ella ? '' : [' a ', F()], ' que chocó con otro', campos ? ` (${campos})` : ''];
+      case 'conflicto-aceptar': return ['aceptó el cambio en conflicto', de()];
+      case 'conflicto-rechazar': return ['rechazó el cambio en conflicto', de()];
+      case 'duplicado-unir': return ella ? ['la unió con ', O()] : ['unió ', F(), ' con ', O()];
+      case 'duplicado-separar': return ella ? ['marcó que es distinta de ', O()] : ['marcó ', F(), ' y ', O(), ' como distintas'];
+      case 'interpretacion': case 'estudio-interpretado': return ella ? 'interpretó su papanicolaou' : ['interpretó el papanicolaou de ', F()];
+      case 'avisado': case 'estudio-avisado': case 'seguimiento-atendido': return ella ? 'la marcó como avisada' : ['marcó a ', F(), ' como avisada'];
+      case 'jornada-programada': return ['programó una jornada', lugar];
+      case 'jornada-cancelada': return ['canceló la jornada', lugar];
+      case 'consulta-asistente': return 'consultó al asistente';
+      default: {
+        const t = QUE[f.tipo] || f.tipo;
+        return [t[0].toLowerCase() + t.slice(1), f.pacienteId && !ella ? [' · ', F()] : ''];
+      }
     }
+  }
+
+  const diaLargo = (iso) => new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ }).format(new Date(iso));
+  function nombreDia(iso) {
+    const d = diaDe(iso);
+    if (d === diaDe(new Date().toISOString())) return { corto: 'Hoy', largo: diaLargo(iso) };
+    if (d === diaDe(new Date(Date.now() - 86400000).toISOString())) return { corto: 'Ayer', largo: diaLargo(iso) };
+    const l = diaLargo(iso);
+    return { corto: l[0].toUpperCase() + l.slice(1), largo: null };
+  }
+  // Agrupa filas (más nuevas primero) por día, conservando el orden.
+  function porDia(filas) {
+    const dias = [];
+    for (const f of filas) {
+      const d = diaDe(f.cuando);
+      if (!dias.length || dias[dias.length - 1].dia !== d) dias.push({ dia: d, cuando: f.cuando, filas: [] });
+      dias[dias.length - 1].filas.push(f);
+    }
+    return dias;
+  }
+  const cabezaDia = (d, total) => {
+    const nom = nombreDia(d.cuando);
+    return h('h2', { class: 'dia' }, h('span', {}, h('b', {}, nom.corto), nom.largo ? h('span', { class: 'tenue' }, ` · ${nom.largo}`) : null),
+      h('span', { class: 'tenue num' }, plural(total, 'movimiento', 'movimientos')));
+  };
+
+  // Un teléfono que sincroniza manda muchos movimientos en el mismo minuto: se juntan en un lote.
+  const MIN_LOTE = 8;
+  // Con búsqueda por folio no se junta nada: se quiere ver cada fila.
+  function enLotes(filas) {
+    const items = [];
+    for (let i = 0; i < filas.length;) {
+      const f = filas[i], disp = f.dispositivo, minuto = f.cuando.slice(0, 16);
+      let j = i + 1;
+      if (disp) while (j < filas.length && filas[j].dispositivo === disp && filas[j].cuando.slice(0, 16) === minuto) j++;
+      if (j - i >= MIN_LOTE) { items.push({ lote: filas.slice(i, j) }); i = j; } else { items.push({ fila: f }); i++; }
+    }
+    return items;
+  }
+  function contarPorGrupo(filas) {
+    const c = new Map();
+    for (const f of filas) { const g = grupoDe(f.tipo); c.set(g, (c.get(g) || 0) + 1); }
+    return c;
+  }
+  const resumenGrupos = (filas) => enLista(GRUPOS.filter((g) => contarPorGrupo(filas).get(g))
+    .map((g) => { const k = contarPorGrupo(filas).get(g); return `${n(k)} ${k === 1 ? g.uno : g.varios}`; }));
+
+  async function vistaBitacora(vista, q = {}) {
+    document.title = 'Bitácora · Expediente Rosa';
+    let limite = 200, todas = [], ids = new Set(), recientes = new Set(), primera = true, cerrado = false;
+    let fuentes = [], sondeo = null, recarga = null, abiertas = 0;
+    const abiertosLotes = new Set();
+    const folios = new Map(); // pacienteId → folio (de la misma bitácora o de /api/pacientes/:id)
+    const pedidos = new Set();
+    const filtros = { tipo: q.tipo || '', autor: q.autor || '', folio: (q.folio || '').toUpperCase() };
+
+    // ----- Encabezado y filtros -----
+    const periodo = h('span', {}, 'Cargando…');
+    const vivo = h('span', { class: 'pildora', hidden: true });
+    const ejemplo = h('span', { class: 'pildora ejemplo', hidden: true }, h('span', { class: 'punto' }), 'Datos de ejemplo');
+    const anuncio = h('span', { class: 'solo-lector', role: 'status', 'aria-live': 'polite' });
+    const buscaFolio = h('input', { type: 'search', name: 'folio', autocomplete: 'off', spellcheck: 'false', placeholder: 'Ej. HUE-004', value: filtros.folio, class: 'mono-campo' });
+    const selAutor = h('select', { name: 'autor' });
+    const verTodo = h('button', { class: 'boton quieto', type: 'button', onclick: () => { filtros.tipo = ''; filtros.autor = ''; filtros.folio = ''; buscaFolio.value = ''; cambio(); buscaFolio.focus(); } }, 'Ver todo');
+    buscaFolio.addEventListener('input', () => { filtros.folio = buscaFolio.value.trim().toUpperCase(); cambio(); });
+    buscaFolio.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && buscaFolio.value) { ev.preventDefault(); buscaFolio.value = ''; filtros.folio = ''; cambio(); } });
+    selAutor.addEventListener('change', () => { filtros.autor = selAutor.value; cambio(); });
+
+    const filtrosCaja = h('div', { class: 'derecha filtros' },
+      h('label', { class: 'campo' }, h('span', {}, 'Folio'), buscaFolio),
+      h('label', { class: 'campo' }, h('span', {}, 'Quién'), selAutor),
+      verTodo);
+    const chips = h('div', { class: 'tipos', role: 'group', 'aria-label': 'Movimientos por tipo. Elige uno para filtrar.' });
+    const lista = h('div', { class: 'linea-tiempo' }, esqueletoBitacora());
+    const cuerpo = h('section', { class: 'panel bitacora', 'aria-label': 'Movimientos, el más nuevo primero' }, lista);
+    const cajon = cajonFolio();
+
+    vista.append(
+      h('div', { class: 'encabezado' },
+        h('div', {}, h('h1', {}, 'Bitácora'), h('p', { class: 'meta' }, periodo, vivo, ejemplo, anuncio)),
+        filtrosCaja),
+      chips, cuerpo, cajon.el);
+
+    // ----- Filtros -----
+    const activos = () => !!(filtros.tipo || filtros.autor || filtros.folio);
+    const pasaAutor = (f) => !filtros.autor || quienDe(f) === filtros.autor;
+    const pasaFolio = (f) => !filtros.folio || [f.folio, folios.get(f.otraPacienteId)].some((x) => x && x.toUpperCase().includes(filtros.folio));
+    const pasaTipo = (f) => !filtros.tipo || grupoDe(f.tipo).id === filtros.tipo;
+
+    function cambio() {
+      history.replaceState(null, '', '#/' + conQuery('bitacora', { tipo: filtros.tipo, autor: filtros.autor, folio: filtros.folio }));
+      pintar();
+    }
+
+    function pintarAutores() {
+      const cuenta = new Map();
+      for (const f of todas) { const a = quienDe(f) || ''; cuenta.set(a, (cuenta.get(a) || 0) + 1); }
+      if (filtros.autor && !cuenta.has(filtros.autor)) cuenta.set(filtros.autor, 0);
+      const orden = [...cuenta].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'));
+      selAutor.replaceChildren(h('option', { value: '' }, 'Todas'),
+        ...orden.filter(([a]) => a).map(([a, k]) => h('option', { value: a, selected: a === filtros.autor }, `${autorTexto(a)} (${n(k)})`)));
+    }
+
+    function pintarChips(base) {
+      const cuenta = contarPorGrupo(base);
+      chips.replaceChildren(...GRUPOS.filter((g) => g.siempre || cuenta.get(g) || filtros.tipo === g.id).map((g) => {
+        const k = cuenta.get(g) || 0, activo = filtros.tipo === g.id;
+        return h('button', {
+          class: 'tipo' + (k ? '' : ' cero-tipo'), type: 'button', 'aria-pressed': activo ? 'true' : 'false',
+          disabled: !k && !activo, 'aria-label': `${g.nombre}: ${n(k)}${activo ? '. Filtro activo; toca para quitarlo.' : ''}`,
+          onclick: () => { filtros.tipo = activo ? '' : g.id; cambio(); },
+        }, iconoMov(g.id), h('b', { class: 'num' }, n(k)), h('span', {}, g.nombre));
+      }));
+    }
+
+    // ----- Línea de tiempo -----
+    const ctxLista = {
+      folio: (f) => botonFolio(f.folio, f.pacienteId),
+      otra: (f) => (f.otraPacienteId ? botonFolio(folios.get(f.otraPacienteId), f.otraPacienteId) : null),
+    };
+    function botonFolio(folio, pacienteId) {
+      if (!pacienteId && !folio) return h('span', { class: 'cero' }, 'sin folio');
+      const texto = folio || pacienteId.slice(0, 8).toLowerCase();
+      if (!pacienteId) return h('span', { class: 'mono folio' }, texto);
+      return h('button', { class: 'folio-boton mono', type: 'button', 'aria-haspopup': 'dialog', title: 'Ver la bitácora de esta paciente', onclick: (ev) => cajon.abrir(folio, pacienteId, ev.currentTarget) }, texto);
+    }
+    const filaMov = (f, ctx) => h('li', { class: 'mov' + (recientes.has(f.id) ? ' nueva' : ''), 'data-id': f.id },
+      h('time', { class: 'hora num', datetime: f.cuando }, hora(f.cuando)),
+      h('span', { class: 'ico' }, iconoMov(grupoDe(f.tipo).id)),
+      h('p', { class: 'texto' }, autorEl(f), ' ', [frase(f, ctx)].flat(Infinity)));
+
+    function filaLote(filas) {
+      const clave = filas[filas.length - 1].id; // el más viejo no cambia aunque lleguen más
+      const abierto = abiertosLotes.has(clave);
+      const autores = [...new Set(filas.map(quienDe).filter(Boolean))];
+      const pacientes = new Set(filas.map((f) => f.pacienteId).filter(Boolean)).size;
+      const disp = filas[0].dispositivo;
+      const detalle = h('ol', { class: 'lote-filas', id: 'lote-' + clave.replace(/[^\w-]/g, ''), hidden: !abierto }, abierto ? filas.map((f) => filaMov(f, ctxLista)) : null);
+      const boton = h('button', {
+        class: 'boton quieto chico ver-lote', type: 'button', 'aria-expanded': abierto ? 'true' : 'false', 'aria-controls': detalle.id,
+        onclick: () => {
+          const abrir = !abiertosLotes.has(clave);
+          if (abrir) { abiertosLotes.add(clave); detalle.replaceChildren(...filas.map((f) => filaMov(f, ctxLista))); } else abiertosLotes.delete(clave);
+          detalle.hidden = !abrir;
+          boton.setAttribute('aria-expanded', String(abrir));
+          boton.textContent = abrir ? 'Ocultar' : `Ver los ${n(filas.length)}`;
+        },
+      }, abierto ? 'Ocultar' : `Ver los ${n(filas.length)}`);
+      const nueva = filas.some((f) => recientes.has(f.id));
+      return h('li', { class: 'mov lote' + (nueva ? ' nueva' : ''), 'data-id': clave },
+        h('time', { class: 'hora num', datetime: filas[0].cuando }, hora(filas[0].cuando)),
+        h('span', { class: 'ico' }, iconoMov('lote')),
+        h('div', { class: 'texto' },
+          h('p', {}, enLista(autores.map(autorTexto)).length ? h('b', { class: 'autor' }, enLista(autores.map(autorTexto))) : null,
+            autores.length > 1 ? ' sincronizaron ' : ' sincronizó ', resumenGrupos(filas)),
+          h('p', { class: 'lote-sub' }, `${plural(pacientes, 'paciente', 'pacientes')} · llegaron juntos de ${autorTexto(disp)}`)),
+        boton, detalle);
+    }
+
+    function pintar() {
+      verTodo.hidden = !activos();
+      pintarAutores();
+      const base = todas.filter((f) => pasaAutor(f) && pasaFolio(f));
+      pintarChips(base);
+      const filas = base.filter(pasaTipo);
+      chips.hidden = filtrosCaja.hidden = !todas.length && !activos();
+      if (!todas.length) {
+        periodo.textContent = 'Quién hizo qué y cuándo, sin datos clínicos.';
+        lista.replaceChildren(vacioConMascota('Sin movimientos todavía', 'Cada alta, visita, estudio y aviso aparece aquí en cuanto llega de las brigadas.'));
+        return;
+      }
+      const viejo = todas[todas.length - 1].cuando;
+      periodo.textContent = `${plural(todas.length, 'movimiento', 'movimientos')} desde ${cuando(viejo)} · sin datos clínicos`;
+      if (!filas.length) {
+        lista.replaceChildren(h('div', { class: 'sin-resultados' }, h('b', {}, 'Nada con estos filtros'),
+          h('p', { class: 'tenue' }, filtros.folio ? `Ningún folio contiene «${filtros.folio}» en este periodo.` : 'Prueba con otro tipo o con otra persona.'),
+          h('button', { class: 'boton secundario chico', type: 'button', onclick: () => verTodo.click() }, 'Ver todo')));
+        return;
+      }
+      lista.replaceChildren(...porDia(filas).map((d) => h('section', { class: 'dia-bloque' },
+        cabezaDia(d, d.filas.length),
+        h('ol', { class: 'movs' }, (filtros.folio ? d.filas.map((fila) => ({ fila })) : enLotes(d.filas)).map((it) => (it.lote ? filaLote(it.lote) : filaMov(it.fila, ctxLista)))))),
+        ...(todas.length >= limite && limite < 500 ? [h('div', { class: 'mas' }, h('button', { class: 'boton secundario chico', type: 'button', onclick: () => { limite = 500; cargar(); } }, 'Cargar anteriores'))] : []));
+      // Con «Reducir movimiento» la fila nueva solo se marca un momento, sin moverse.
+      if (recientes.size) {
+        recientes = new Set();
+        setTimeout(() => lista.querySelectorAll('.nueva').forEach((x) => x.classList.remove('nueva')), 2400);
+      }
+    }
+
+    // ----- Datos -----
+    async function cargar() {
+      const r = await pedir(conQuery('/api/bitacora', { limite: String(limite) }));
+      if (cerrado) return;
+      if (!r.ok) {
+        if (primera) lista.replaceChildren(h('div', { class: 'sin-resultados' }, h('p', { class: 'error' }, `No se pudo leer la bitácora (${r.status}).`), h('button', { class: 'boton secundario chico', type: 'button', onclick: cargar }, 'Reintentar')));
+        return;
+      }
+      ejemplo.hidden = !r.ejemplo;
+      const filas = (r.datos || []).slice().sort((a, b) => b.cuando.localeCompare(a.cuando));
+      const nuevos = primera ? [] : filas.filter((f) => !ids.has(f.id));
+      if (!primera && !nuevos.length && filas.length === todas.length) return; // nada cambió: no se repinta
+      for (const f of filas) if (f.pacienteId && f.folio) folios.set(f.pacienteId, f.folio);
+      todas = filas; ids = new Set(filas.map((f) => f.id)); recientes = new Set(nuevos.map((f) => f.id));
+      if (nuevos.length) anuncio.textContent = nuevos.length === 1 ? 'Llegó un movimiento nuevo.' : `Llegaron ${n(nuevos.length)} movimientos nuevos.`;
+      pintar();
+      buscarOtras();
+      if (primera) { primera = false; if (!r.ejemplo) conectarVivo(); }
+    }
+
+    // El folio de la «otra ficha» de un duplicado: de la bitácora o, si no está, del expediente (solo el folio).
+    async function buscarOtras() {
+      const faltan = [...new Set(todas.map((f) => f.otraPacienteId).filter((id) => id && !folios.has(id) && !pedidos.has(id)))];
+      if (!faltan.length) return;
+      faltan.forEach((id) => pedidos.add(id));
+      const rs = await Promise.all(faltan.map((id) => pedir(`/api/pacientes/${encodeURIComponent(id)}`)));
+      if (cerrado) return;
+      let algo = false;
+      rs.forEach((r, i) => { if (r.ok && r.datos?.folio) { folios.set(faltan[i], r.datos.folio); algo = true; } });
+      if (algo) pintar();
+    }
+
+    // En vivo: el SSE de la jornada (hasta 3 comunidades, como el tablero); si no, refresco cada 15 s.
+    async function conectarVivo() {
+      const pedirRecarga = () => { clearTimeout(recarga); recarga = setTimeout(cargar, 500); };
+      const marcar = () => {
+        vivo.hidden = false;
+        vivo.className = abiertas > 0 ? 'pildora vivo' : 'pildora';
+        vivo.replaceChildren(...(abiertas > 0 ? [h('span', { class: 'punto' }), 'En vivo'] : ['Se actualiza cada 15 s']));
+        clearInterval(sondeo);
+        sondeo = setInterval(() => { if (!document.hidden) cargar(); }, abiertas > 0 ? 60000 : 15000);
+      };
+      marcar();
+      const r = await pedir('/api/resumen');
+      if (cerrado || !r.ok || !window.EventSource) return;
+      const comunidades = [...new Set((r.datos?.porComunidad || []).map((c) => c.comunidad).filter(Boolean))];
+      if (!comunidades.length || comunidades.length > 3) return;
+      for (const c of comunidades) {
+        const es = new EventSource(`/api/jornada/${encodeURIComponent(c)}/en-vivo`);
+        let abierta = false;
+        es.onopen = () => { if (!abierta) { abierta = true; abiertas++; marcar(); } };
+        es.onerror = () => { if (abierta) { abierta = false; abiertas--; marcar(); } };
+        for (const ev of ['alta', 'estudio', 'visita', 'interpretacion', 'avisado', 'duplicado', 'actualizacion', 'conflicto']) es.addEventListener(ev, pedirRecarga);
+        fuentes.push(es);
+      }
+    }
+    const alVolver = () => { if (!document.hidden && !primera) cargar(); };
+    document.addEventListener('visibilitychange', alVolver);
+
+    pintarAutores();
     await cargar();
+    return () => {
+      cerrado = true; fuentes.forEach((f) => f.close()); clearInterval(sondeo); clearTimeout(recarga);
+      document.removeEventListener('visibilitychange', alVolver); cajon.cerrar();
+    };
+
+    // ----- Panel lateral: la bitácora de una paciente (sin datos clínicos) -----
+    function cajonFolio() {
+      const titulo = h('h2', { class: 'mono', id: 'cajon-titulo' });
+      const meta = h('p', { class: 'nota' });
+      const contenido = h('div', { class: 'cajon-cuerpo' });
+      const filtrar = h('button', { class: 'boton secundario chico', type: 'button' }, 'Filtrar la lista por este folio');
+      const el = h('dialog', { class: 'cajon', 'aria-labelledby': 'cajon-titulo' },
+        h('div', { class: 'cajon-cabeza' },
+          h('div', {}, h('p', { class: 'nota' }, 'Bitácora de la paciente'), titulo),
+          h('button', { class: 'boton quieto cerrar', type: 'button', 'aria-label': 'Cerrar', onclick: () => cerrar() },
+            s('svg', { viewBox: '0 0 16 16', class: 'icono', 'aria-hidden': 'true' }, s('path', { d: 'M3.5 3.5l9 9M12.5 3.5l-9 9', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linecap': 'round' })))),
+        meta, contenido,
+        h('div', { class: 'cajon-pie' }, filtrar, h('p', { class: 'nota' }, 'Solo quién, qué y cuándo. Los resultados se ven en el expediente.')));
+      let origen = null, pedido = 0;
+      el.addEventListener('click', (ev) => { if (ev.target === el) cerrar(); }); // clic en el fondo
+      el.addEventListener('close', () => { origen?.focus?.(); });
+      function cerrar() { if (el.open) el.close(); }
+
+      async function abrir(folio, pacienteId, desde) {
+        origen = desde;
+        const yo = ++pedido;
+        titulo.textContent = folio || pacienteId.slice(0, 8).toLowerCase();
+        meta.textContent = 'Cargando…';
+        contenido.replaceChildren(esqueletoBitacora(3));
+        filtrar.hidden = !folio;
+        filtrar.onclick = () => { filtros.folio = folio.toUpperCase(); buscaFolio.value = filtros.folio; filtros.tipo = ''; cerrar(); cambio(); };
+        if (!el.open) el.showModal();
+        const r = await pedir(conQuery('/api/bitacora', { limite: '200', pacienteId }));
+        if (yo !== pedido || cerrado) return;
+        if (!r.ok) { meta.textContent = ''; contenido.replaceChildren(h('p', { class: 'error' }, `No se pudo leer (${r.status}).`)); return; }
+        const filas = (r.datos || []).filter((f) => f.pacienteId === pacienteId || f.otraPacienteId === pacienteId)
+          .sort((a, b) => b.cuando.localeCompare(a.cuando));
+        if (!filas.length) { meta.textContent = 'Sin movimientos.'; contenido.replaceChildren(); return; }
+        const primero = filas[filas.length - 1].cuando;
+        meta.textContent = `${resumenGrupos(filas)} · desde ${cuando(primero)}`;
+        const ctx = {
+          ella: true,
+          folio: () => null,
+          // Si esta paciente es la «otra» del duplicado, la otra ficha es la de la fila.
+          otra: (f) => (f.otraPacienteId === pacienteId ? h('span', { class: 'mono folio' }, f.folio || 'otra ficha')
+            : f.otraPacienteId ? h('span', { class: 'mono folio' }, folios.get(f.otraPacienteId) || 'otra ficha') : null),
+        };
+        contenido.replaceChildren(...porDia(filas).map((d) => h('section', { class: 'dia-bloque' },
+          cabezaDia(d, d.filas.length),
+          h('ol', { class: 'movs' }, d.filas.map((f) => filaMov(f, ctx))))));
+      }
+      return { el, abrir, cerrar };
+    }
+  }
+  function esqueletoBitacora(k = 6) {
+    return h('div', { 'aria-hidden': 'true', class: 'esqueleto-mov' }, Array.from({ length: k }, (_, i) => h('div', {},
+      h('div', { class: 'hueso', style: 'height:14px;width:40px' }), h('div', { class: 'hueso', style: 'height:28px;width:28px;border-radius:50%' }),
+      h('div', { class: 'hueso', style: `height:16px;width:${[62, 48, 70, 54, 40, 66][i % 6]}%` }))));
   }
 
   // ---------- 6. Asistente ----------
@@ -1257,6 +1630,10 @@
     setTimeout(quitar, 4000); // por si la pestaña estaba oculta y la animación no corrió
     document.body.append(capa);
   });
+
+  // Alto real de la barra (en teléfono la navegación baja a otra fila): los encabezados fijos se pegan debajo.
+  const barraEl = $('#barra');
+  if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--alto-barra', `${barraEl.offsetHeight}px`)).observe(barraEl);
 
   window.addEventListener('hashchange', mostrar);
   mostrar();
