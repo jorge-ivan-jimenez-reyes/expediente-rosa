@@ -17,7 +17,7 @@ Hilo (versión de Jorge): planear la visita en el panel → el teléfono se prep
 
 | Tiempo | En pantalla | Se dice |
 |---|---|---|
-| 0:00–0:10 | Portada | «Les presentamos Expediente Rosa: una app para la brigada y un panel web para la oficina de EIRA, hecha para trabajar días sin señal.» |
+| 0:00–0:10 | Portada | «Les presentamos Expediente Rosa, un ecosistema para administrar los expedientes de las pacientes de EIRA: una app para la brigada y un panel web para la oficina, hecho para trabajar días sin señal.» |
 | 0:10–0:28 | Panel → Jornadas → «Programar jornada»: Oaxaca, San Martín Peras, 25 de noviembre, equipo «Enf. Rocío, Dr. Andrés» → Guardar. Simulador → Jornada → «Actualizar ahora» → tarjeta verde «12 pacientes» | «Lunes, Ciudad Guzmán. Coordinación programa la siguiente visita: San Martín Peras, Oaxaca, martes 25, y quién de la brigada va. No es la primera vez que van: ahí ya hay 12 mujeres con expediente. En cuanto la jornada queda programada, el teléfono de la brigada baja solo esas 12 historias.» |
 | 0:28–0:40 | Tarjeta «Lista en el teléfono» | «Los datos se quedan en el teléfono, cifrados por iOS con la llave del propio equipo. La IA es el modelo de Apple que corre en el chip del teléfono: lo que lee de las pacientes no sale a ningún servidor.» |
 | 0:40–1:00 | Activar «Simular sin señal» → Buscar → Escanear → Ejemplo «Eulalia, marzo 2025» → aparece Eulalia García Luna → «Es ella» | «Martes, nueve y cuarenta, en la sierra. Se va la señal y no pasa nada: los datos ya están aquí. Llega una cara conocida, Eulalia García Luna, de 67 años, con su hoja de 2025. Rocío la escanea y la app la reconoce aunque venga escrita distinto. Rocío confirma; la app nunca une expedientes sola.» |
