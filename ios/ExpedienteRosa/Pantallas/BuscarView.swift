@@ -50,6 +50,21 @@ struct BuscarView: View {
         return pacientes.filter { $0.fusionadaEn == nil && Coincidencias.normalizar($0.comunidad) == n }
     }
 
+    /// Pie de la pantalla: la mascota acompaña y recuerda que todo queda en el teléfono.
+    /// Sin señal pone su nubecita; con señal, reposa y parpadea.
+    private var pieMascota: some View {
+        VStack(spacing: Tema.Espacio.s) {
+            Mascota(estado: sync.enLinea ? .reposo : .sinSenal, tamano: 72)
+            Text(sync.enLinea ? "Lo que captures se guarda aquí primero." : "Sin señal. Todo se guarda en este teléfono.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Tema.Espacio.xl)
+        .animation(Tema.resorte, value: sync.enLinea)
+    }
+
     var body: some View {
         NavigationStack(path: $ruta) {
             ScrollView {
@@ -58,6 +73,7 @@ struct BuscarView: View {
                     botonEscanear
                     formulario
                     resultados
+                    if !hayConsulta { pieMascota }
                 }
                 .padding(.horizontal, Tema.Espacio.l)
                 .padding(.bottom, Tema.Espacio.xxl)
