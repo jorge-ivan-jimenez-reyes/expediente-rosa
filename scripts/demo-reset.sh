@@ -25,7 +25,8 @@ echo "3/5 Cargando las pacientes ficticias"
 (cd api && API_URL="$API" pnpm -s seed >/dev/null)
 
 echo "4/5 Programando jornadas"
-for x in "San Martín Peras|Oaxaca|2026-11-25" "Huejuquilla|Jalisco|2026-12-02" "Metlatónoc|Guerrero|2026-12-09"; do
+# San Martín Peras se programa en vivo durante la demo.
+for x in "Huejuquilla|Jalisco|2026-12-02" "Metlatónoc|Guerrero|2026-12-09"; do
   IFS='|' read -r c e f <<< "$x"
   curl -sf -X POST "$API/jornadas" -H 'content-type: application/json' \
     -d "{\"comunidad\":\"$c\",\"estado\":\"$e\",\"fecha\":\"$f\",\"autor\":\"Coordinación EIRA\"}" >/dev/null

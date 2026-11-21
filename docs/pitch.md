@@ -1,4 +1,4 @@
-# Guion del pitch (2 minutos), versión 6
+# Guion del pitch (2 minutos), versión 7
 
 Orden: la paciente que regresa primero, luego la nueva, sincronizar y el tablero. Cubre lo que pide el Reto 1: alta de una paciente ficticia, búsqueda con detección de coincidencia, segunda visita con historial, trabajo sin conexión verificable y explicación del control de acceso. Son unas 300 palabras habladas.
 
@@ -11,20 +11,20 @@ Orden: la paciente que regresa primero, luego la nueva, sincronizar y el tablero
 
 ## Guion
 
-Hilo: una sola semana de una brigada, contada con día y hora. Personas ficticias (Eulalia, Adela, la enfermera Rocío); el problema y las cifras de EIRA son reales. Poner «Personas ficticias» en la diapositiva 1.
+Hilo (versión de Jorge): planear la visita en el panel → el teléfono se prepara solo → en la sierra sin señal no pasa nada → cara conocida, se escanea y solo se actualiza → vuelve la señal y se sincroniza sin duplicar → coordinación lo gestiona en el panel. Personas ficticias; el problema y las cifras son de EIRA.
+
+**Antes:** `scripts/demo-reset.sh --app` (deja Huejuquilla y Metlatónoc programadas; San Martín Peras se programa en vivo). Panel abierto como Coordinación en Jornadas. Simulador en Jornada, servidor `http://localhost:8787/api`, rol Enfermería.
 
 | Tiempo | En pantalla | Se dice |
 |---|---|---|
-| 0:00–0:10 | Portada | «Les presentamos Expediente Rosa, un ecosistema para administrar los expedientes de las pacientes de EIRA: una app en el teléfono de la brigada y un panel web para coordinación y patología. Funciona aunque pasen días sin señal.» |
-| 0:10–0:28 | Diapositiva: la semana de una brigada | «Martes, nueve y cuarenta. San Martín Peras, en la Mixteca de Oaxaca. La brigada lleva dos días sin señal. La enfermera Rocío atiende a Eulalia García Luna, de 67 años. En marzo de 2025, a Eulalia le salió una mastografía BI-RADS 4 y la mandaron a Huajuapan. Ese resultado está en una hoja de papel, en una caja en Ciudad Guzmán. Rocío no lo sabe.» |
-| 0:28–0:50 | Simulador con «Sin señal» → Buscar: «Eulalia», «Garsia», «Luna», 67 → aparece Eulalia García Luna con puntaje, razones y línea de IA | «Rocío escribe García con s y pone 67, porque Eulalia no sabe su fecha de nacimiento. La app está sin señal. La app la encuentra y dice por qué: nombre parecido, misma edad, misma comunidad. El modelo de Apple, que corre aquí mismo, lo explica en una línea. Rocío confirma que es ella; la app nunca une expedientes sola.» |
-| 0:50–1:04 | «Es ella» → expediente como Enfermería (candado) → cambiar a Médico → BI-RADS 4 → Agregar estudio → «Leer hoja» → Ejemplo «Hoja de hoy: Eulalia» → se llena BI-RADS 4, Referencia y la nota → Guardar | «Rocío no ve resultados. El médico sí: ve el BI-RADS 4 y la referencia que nunca se cerró, Le toma foto a la hoja de hoy y la app llena BI-RADS 4, la referencia y la nota; él revisa y guarda en una visita nueva.» |
-| 1:04–1:15 | Buscar → «Es nueva» → Adela Ruiz Pacheco, 44 → firma → Guardar | «Detrás de Eulalia viene Adela, de 44, que nunca ha venido. Nombre, apellidos, edad, comunidad y su firma. Sin firma no se guarda.» |
-| 1:15–1:35 | Jornada «pendientes» → apagar «Simular sin señal» → Sincronizar | «Jueves, seis y veinte de la tarde. La camioneta llega a Juxtlahuaca y vuelve la señal. Rocío sincroniza. Si la señal se corta a la mitad, Valkey reconoce cada registro por su llave y no lo duplica. Eulalia entra a la lista de seguimiento como vencida.» |
-| 1:35–1:52 | Panel web: San Martín Peras → Patología | «Viernes, Ciudad Guzmán. Coordinación ve San Martín Peras: trece mujeres, sus estudios y tres papanicolaous esperando al patólogo. El patólogo los interpreta desde aquí; si alguno sale anormal, entra a seguimiento igual que Eulalia.» |
-| 1:52–2:00 | Diapositiva de arquitectura | «La próxima vez que la brigada suba a San Martín Peras, el teléfono de Rocío ya trae el resultado. El código es público, con licencia MIT.» |
-
-Cifras del tablero verificadas con el seed (21-nov, 12:05): San Martín Peras 12 personas + Adela = 13; 3 papanicolaous en laboratorio. Si el médico agrega un papanicolaou en la demo, serán 4: decirlo como lo muestre la pantalla.
+| 0:00–0:10 | Portada | «Les presentamos Expediente Rosa: una app para la brigada y un panel web para la oficina de EIRA, hecha para trabajar días sin señal.» |
+| 0:10–0:28 | Panel → Jornadas → «Programar jornada»: Oaxaca, San Martín Peras, 25 de noviembre, equipo «Enf. Rocío, Dr. Andrés» → Guardar. Simulador → Jornada → «Actualizar ahora» → tarjeta verde «12 pacientes» | «Lunes, Ciudad Guzmán. Coordinación programa la siguiente visita: San Martín Peras, Oaxaca, martes 25, y quién de la brigada va. No es la primera vez que van: ahí ya hay 12 mujeres con expediente. En cuanto la jornada queda programada, el teléfono de la brigada baja solo esas 12 historias.» |
+| 0:28–0:40 | Tarjeta «Lista en el teléfono» | «Los datos se quedan en el teléfono, cifrados por iOS con la llave del propio equipo. La IA es el modelo de Apple que corre en el chip del teléfono: lo que lee de las pacientes no sale a ningún servidor.» |
+| 0:40–1:00 | Activar «Simular sin señal» → Buscar → Escanear → Ejemplo «Eulalia, marzo 2025» → aparece Eulalia García Luna → «Es ella» | «Martes, nueve y cuarenta, en la sierra. Se va la señal y no pasa nada: los datos ya están aquí. Llega una cara conocida, Eulalia García Luna, de 67 años, con su hoja de 2025. Rocío la escanea y la app la reconoce aunque venga escrita distinto. Rocío confirma; la app nunca une expedientes sola.» |
+| 1:00–1:18 | Expediente como Enfermería (candado) → rol Médico → BI-RADS 4 de 2025 → Agregar estudio → «Leer hoja» → «Hoja de hoy: Eulalia» → Guardar | «Rocío no ve resultados; el médico sí. Ve el BI-RADS 4 de 2025 y la referencia a Huajuapan que nunca se cerró. Le toma foto a la hoja de hoy y la app llena BI-RADS 4, la referencia y la nota. Él revisa y guarda: no se crea otra paciente, se actualiza la que ya existía.» |
+| 1:18–1:38 | Jornada «pendientes» → apagar «Simular sin señal» → se sincroniza solo | «Jueves, seis y veinte. La camioneta llega a Juxtlahuaca, vuelve la señal y la app sincroniza sola. Si la señal se corta a la mitad, no pasa nada: cada registro lleva una llave y Valkey no aplica dos veces el mismo. Eulalia entra sola a la lista de seguimiento.» |
+| 1:38–1:55 | Panel → Tablero San Martín Peras → Patología → Seguimiento | «Viernes, de vuelta en Ciudad Guzmán. Coordinación ve lo que trajo la brigada, el patólogo interpreta los papanicolaous que quedaron en laboratorio y Eulalia aparece en seguimiento para que alguien la llame. Cada paso queda en la bitácora, sin datos clínicos.» |
+| 1:55–2:00 | Diapositiva de arquitectura | «El código es público, con licencia MIT.» |
 
 ## Si preguntan
 
