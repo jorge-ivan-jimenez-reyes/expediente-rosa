@@ -67,3 +67,22 @@ Login, WhatsApp, entrega de resultados en PDF (reto 4), panel web y despliegue e
 | 5. Entrega | `README.md`, `seed/`, `docs/` | Datos ficticios (incluye pares de la misma señora escrita distinto), README para correrlo, texto de Devpost y guion del pitch de 2 min |
 
 Orden: el 0 primero (15 min). Después 1, 2, 3 y 5 en paralelo. El 4 arranca con los modelos del 0 y conecta lo de los otros al final.
+
+## Endpoints
+
+Todos bajo `/api`. Los nuevos (Carril C) solo agregan; los contratos de `sync`, `pacientes` y `duplicados` no cambiaron.
+
+| Método y ruta | Devuelve |
+|---|---|
+| `POST /sync` | `{ aplicados, repetidos, posiblesDuplicados[] }` |
+| `GET /pacientes?comunidad=` · `GET /pacientes/:id` | Paciente(s) con `estudios[]` (nota y consentimiento ya descifrados) |
+| `GET /duplicados` · `POST /duplicados/resolver` | Cola de pares `{ llave, puntaje, razones, a, b }` · `{ ok }` (unir también mueve el seguimiento) |
+| `GET /seguimiento?comunidad=` | Estudios `anormal` sin atender, vencidos primero: `[{ estudioId, tipo, fecha, fechaLimite, vencido, diasRestantes, paciente{id, folio, nombre, apellidos, comunidad} }]`. Límite = fecha del estudio + 15 días. Valkey: sorted set `seguimiento` |
+| `POST /seguimiento/:estudioId/atendido` | `{ ok }` y lo saca de la lista; 404 si no estaba |
+| `GET /jornada/:comunidad?dia=AAAA-MM-DD` | Conteo del día (CDMX): `{ comunidad, dia, altas, estudios, porTipo{…}, anormales, duplicados }`. Valkey: hash `jornada:<comunidad>:<día>` |
+| `GET /jornada/:comunidad/en-vivo` | SSE: `estado` al conectar; luego `alta`, `estudio` con el conteo nuevo; `latido` cada 15 s. Valkey: PUBLISH/SUBSCRIBE `canal:jornada:<comunidad>` |
+| `GET /buscar?nombre=&apellidoPaterno=&apellidoMaterno=&edad=&nacimiento=&comunidad=&k=10` | `{ motor: 'valkey-search' \| 'bloques', resultados: [{ paciente, puntaje, razones, posible, distancia? }] }`. Con `valkey-bundle` usa KNN de valkey-search (`docker-compose.bundle.yml`); si no, los sets de bloque |
+| `GET /estadisticas` | `{ pacientes, duplicadosPendientes, eventos, seguimientoPendiente, seguimientoVencido }` |
+| `GET /salud` | `{ ok, valkey, cifrado }` |
+
+Cifrado en reposo: `consentimiento` y `nota` van con AES-256-GCM si hay `CLAVE_DATOS` (32 bytes base64); sin ella se guardan en claro y la API lo avisa en el log.

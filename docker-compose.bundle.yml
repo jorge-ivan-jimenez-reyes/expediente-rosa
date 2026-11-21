@@ -1,0 +1,10 @@
+# Opcional (C4): Valkey con valkey-search para la búsqueda por similitud (KNN).
+# Cambia solo la imagen; el compose principal queda igual y la API detecta el
+# módulo sola (sin él, /api/buscar usa los sets de bloque).
+#   docker compose -f docker-compose.yml -f docker-compose.bundle.yml up -d
+# Ojo: una vez creado el índice, volver a valkey/valkey:8 con el mismo volumen
+# puede fallar al cargar los datos del módulo. Para regresar, borra el índice
+# (valkey-cli FT.DROPINDEX idx:pacientes) antes de cambiar la imagen.
+services:
+  valkey:
+    image: valkey/valkey-bundle:8
