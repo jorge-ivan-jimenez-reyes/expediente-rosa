@@ -1,5 +1,5 @@
 // Reconocer a una paciente que regresa aunque su nombre venga escrito distinto.
-// Misma lógica que ios/ExpedienteRosa/Coincidencias.swift: si cambias una, cambia la otra.
+// Misma lógica que ios/ExpedienteRosa/Coincidencias/Coincidencias.swift: si cambias una, cambia la otra.
 
 const APODOS: Record<string, string> = {
   ma: 'maria', 'ma.': 'maria', mari: 'maria', lupe: 'guadalupe', lupita: 'guadalupe',
