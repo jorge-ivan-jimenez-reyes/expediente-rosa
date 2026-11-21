@@ -9,11 +9,14 @@ import UIKit
 ///
 /// Pantallas: buscar, buscar-resultados, buscar-hoja, buscar-vacia, alta, expediente, expediente-medico, escanear, jornada, jornada-pendiente, revision,
 /// y del Reto 1: editar, estudio, revision-conflictos, revision-seguimiento, bitacora.
+/// `mascota`: los cinco estados de la mascota lado a lado. `escanear-leyendo`: la hoja mientras se lee.
+/// `revision-vacia`: Revisión sin pendientes.
 @MainActor
 enum ModoCaptura {
     static let pantallas = ["buscar", "buscar-resultados", "buscar-hoja", "buscar-vacia", "alta", "expediente", "expediente-medico",
                             "escanear", "jornada", "jornada-pendiente", "revision",
-                            "editar", "estudio", "revision-conflictos", "revision-seguimiento", "bitacora"]
+                            "editar", "estudio", "revision-conflictos", "revision-seguimiento", "bitacora",
+                            "mascota", "escanear-leyendo", "revision-vacia"]
 
     /// Lo que vino en `-pantalla` (los argumentos de lanzamiento entran a UserDefaults).
     static var pantalla: String? {
@@ -24,7 +27,7 @@ enum ModoCaptura {
     static var pestanaInicial: String {
         switch pantalla {
         case "jornada", "jornada-pendiente": "jornada"
-        case "revision", "revision-conflictos", "revision-seguimiento", "bitacora": "revision"
+        case "revision", "revision-conflictos", "revision-seguimiento", "bitacora", "revision-vacia": "revision"
         default: "buscar"
         }
     }
@@ -32,7 +35,7 @@ enum ModoCaptura {
     static var rol: Rol {
         switch pantalla {
         case "expediente-medico", "estudio": .medico
-        case "revision", "revision-conflictos", "revision-seguimiento", "bitacora": .coordinadora
+        case "revision", "revision-conflictos", "revision-seguimiento", "bitacora", "revision-vacia": .coordinadora
         default: .enfermeria
         }
     }
@@ -79,7 +82,7 @@ enum ModoCaptura {
                                            nacimiento: nil, edad: 46, comunidad: "Metlatónoc", municipio: nil)
 
     static var hojaDemo: (UIImage, HojaLeida)? {
-        guard pantalla == "escanear",
+        guard pantalla == "escanear" || pantalla == "escanear-leyendo",
               let url = Bundle.main.url(forResource: "hoja1", withExtension: "png"),
               let img = UIImage(contentsOfFile: url.path) else { return nil }
         let hoja = HojaLeida(
@@ -256,9 +259,55 @@ struct RaizCaptura: View {
     }
 
     var body: some View {
-        Pestanas(pestana: ModoCaptura.pestanaInicial)
-            .environment(sync)
-            .modelContainer(contenedor)
+        if ModoCaptura.pantalla == "mascota" {
+            MuestrarioMascota()
+        } else {
+            Pestanas(pestana: ModoCaptura.pestanaInicial)
+                .environment(sync)
+                .modelContainer(contenedor)
+        }
+    }
+}
+
+/// `-pantalla mascota`: los cinco estados, chicos (como van en la app), sobre rosa y en grande.
+struct MuestrarioMascota: View {
+    private let estados = Mascota.Estado.allCases
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Tema.Espacio.l) {
+                Text("Mascota").font(.largeTitle.weight(.bold))
+                Tarjeta {
+                    Text("En la app (56 pt)").font(.nota).foregroundStyle(.secondary)
+                    HStack(spacing: 0) {
+                        ForEach(estados) { e in
+                            VStack(spacing: Tema.Espacio.xs) {
+                                Mascota(estado: e, tamano: 56)
+                                Text(e.rawValue).font(.caption2).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+                HStack(spacing: 0) {
+                    ForEach(estados) { e in Mascota(estado: e, tamano: 56, sobreRosa: true).frame(maxWidth: .infinity) }
+                }
+                .padding(.vertical, Tema.Espacio.m)
+                .background(Color("FondoArranque"), in: .rect(cornerRadius: Tema.Radio.tarjeta))
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Tema.Espacio.l) {
+                    ForEach(estados) { e in
+                        VStack(spacing: Tema.Espacio.xs) {
+                            Mascota(estado: e, tamano: 150)
+                            Text(e.rawValue).font(.nota).foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Tema.Espacio.s)
+                        .background(Tema.superficie, in: .rect(cornerRadius: Tema.Radio.tarjeta))
+                    }
+                }
+            }
+            .padding(Tema.Espacio.l)
+        }
+        .background(Tema.fondo)
     }
 }
 #endif

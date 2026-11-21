@@ -82,3 +82,11 @@ Un ícono acompaña a una acción o a un estado. No hay íconos de adorno en tí
 ## Logo
 
 `logo.svg` (fuente) y `logo-1024.png` (sin transparencia, copiado a `AppIcon.appiconset`). Un expediente blanco con la silueta de la paciente en rosa, sobre rosa #C4006A. No usa el moño rosa ni el logo de EIRA.
+
+## Mascota
+
+El expediente del logo con cara (`Pantallas/Mascota.swift`; versión vectorial para el panel en `mascota.svg`). Decorativa: VoiceOver no la lee y con «Reducir movimiento» solo cambia de expresión.
+Sí: arranque (saluda), estados vacíos de Buscar y Revisión, Jornada sin jornadas, «Guardada» (contenta), sincronizando o leyendo una hoja (buscando) y sin señal (ojos tranquilos y nube: lo guardado sigue en el teléfono).
+Tamaño en la app: 44 a 64 pt, una por pantalla, junto al texto que explica el estado; nunca sustituye a ese texto.
+No: Expediente, resultados de estudios, Seguimiento de Revisión, ni junto a BI-RADS 4/5, anormales o seguimientos vencidos.
+No se agranda, no habla, no lleva globos de texto ni chistes: acompaña, no comenta.

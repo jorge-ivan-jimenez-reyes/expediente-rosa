@@ -18,6 +18,13 @@ struct EscanearView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Tema.Espacio.l) {
                     selector
+                    if leyendo {
+                        HStack(spacing: Tema.Espacio.s) {
+                            Mascota(estado: .buscando, tamano: 44)
+                            Text("Leyendo la hoja…").font(.cuerpo).foregroundStyle(.secondary)
+                        }
+                        .transition(.opacity)
+                    }
                     if let hoja { resultado(hoja) }
                     if let imagen {
                         Image(uiImage: imagen)
@@ -36,6 +43,7 @@ struct EscanearView: View {
                 .padding(Tema.Espacio.l)
                 .animation(Tema.resorte, value: hoja)
                 .animation(Tema.resorte, value: imagen)
+                .animation(Tema.resorte, value: leyendo)
             }
             .background(Tema.fondo)
             .navigationTitle("Escanear hoja")
@@ -51,7 +59,10 @@ struct EscanearView: View {
             .onAppear {
                 Inteligencia.precalentar()
                 #if DEBUG
-                if let (img, h) = ModoCaptura.hojaDemo { imagen = img; hoja = h }
+                if let (img, h) = ModoCaptura.hojaDemo {
+                    imagen = img
+                    if ModoCaptura.pantalla == "escanear-leyendo" { leyendo = true } else { hoja = h }
+                }
                 #endif
             }
         }

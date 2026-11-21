@@ -4,6 +4,8 @@
 <dict>
 	<key>API_URL</key>
 	<string>http://localhost:8787/api</string>
+	<key>API_URL_DISPOSITIVO</key>
+	<string>https://stuffed-nikon-losses-nevertheless.trycloudflare.com/api</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>org.eira.expedienterosa.jornadas</string>
@@ -57,6 +59,13 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>

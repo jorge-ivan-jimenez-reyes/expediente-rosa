@@ -218,10 +218,14 @@ struct Guardada: View {
         ZStack {
             Rectangle().fill(.regularMaterial).ignoresSafeArea()
             VStack(spacing: Tema.Espacio.m) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(Tema.verde)
-                    .symbolEffect(.bounce, value: aparece)
+                Mascota(estado: .contenta, tamano: 64)
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(.white, Tema.verde)
+                            .symbolEffect(.bounce, value: aparece)
+                            .offset(x: 4, y: -2)
+                    }
                     .scaleEffect(aparece ? 1 : 0.6)
                 Text("Guardada").font(.titulo)
                 Text("Se manda cuando haya señal").font(.cuerpo).foregroundStyle(.secondary)

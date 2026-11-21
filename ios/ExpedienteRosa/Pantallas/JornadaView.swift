@@ -12,6 +12,8 @@ struct JornadaView: View {
     @State private var error: String?
     @State private var preparando = false
     @State private var exito = 0
+    /// Unos segundos después de sincronizar bien, la mascota rebota.
+    @State private var celebrando = false
 
     var body: some View {
         @Bindable var sync = sync
@@ -60,15 +62,24 @@ struct JornadaView: View {
                         .font(.nota).foregroundStyle(.secondary)
                 }
             }
-            HStack(alignment: .firstTextBaseline, spacing: Tema.Espacio.s) {
-                Text("\(sync.pendientes)")
-                    .font(.cifra)
-                    .contentTransition(.numericText(value: Double(sync.pendientes)))
-                    .animation(Tema.resorte, value: sync.pendientes)
-                Text(sync.pendientes == 1 ? "registro por mandar" : "registros por mandar")
-                    .font(.cuerpo).foregroundStyle(.secondary)
+            HStack(alignment: .center, spacing: Tema.Espacio.s) {
+                HStack(alignment: .firstTextBaseline, spacing: Tema.Espacio.s) {
+                    Text("\(sync.pendientes)")
+                        .font(.cifra)
+                        .contentTransition(.numericText(value: Double(sync.pendientes)))
+                        .animation(Tema.resorte, value: sync.pendientes)
+                    Text(sync.pendientes == 1 ? "registro por mandar" : "registros por mandar")
+                        .font(.cuerpo).foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+                Spacer(minLength: 0)
+                if let estado = estadoMascota {
+                    Mascota(estado: estado, tamano: 56)
+                        .padding(.vertical, -6) // no agranda el renglón
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
             }
-            .accessibilityElement(children: .combine)
+            .animation(Tema.resorte, value: estadoMascota)
             Button {
                 Task { await sincronizar() }
             } label: {
@@ -81,6 +92,15 @@ struct JornadaView: View {
             .tint(Tema.rosaRelleno)
             .disabled(!sync.enLinea || sync.sincronizando)
         }
+    }
+
+    /// La mascota solo aparece cuando tiene algo que decir: sincroniza, no hay señal, salió bien, o aún no hay jornadas.
+    private var estadoMascota: Mascota.Estado? {
+        if sync.sincronizando || sync.preparandoProximas || preparando { return .buscando }
+        if !sync.enLinea { return .sinSenal }
+        if celebrando { return .contenta }
+        if sync.proximasJornadas.isEmpty { return .reposo }
+        return nil
     }
 
     /// Bajar una comunidad a mano. Si coordinación programó jornadas, queda plegado como respaldo.
@@ -205,8 +225,17 @@ struct JornadaView: View {
             let r = try await sync.sincronizar()
             withAnimation(Tema.resorteLogro) { resultado = r }
             exito += 1
+            celebrar()
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+
+    private func celebrar() {
+        celebrando = true
+        Task {
+            try? await Task.sleep(for: .seconds(2.4))
+            celebrando = false
         }
     }
 
@@ -216,6 +245,7 @@ struct JornadaView: View {
             let n = try await sync.prepararJornada(comunidad: comunidad.limpio)
             preparadas = n
             exito += 1
+            celebrar()
         } catch {
             self.error = error.localizedDescription
         }

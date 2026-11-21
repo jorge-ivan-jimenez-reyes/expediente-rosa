@@ -369,7 +369,7 @@ struct BuscarView: View {
         case "expediente", "expediente-medico", "editar", "estudio":
             if let p = pacientes.first(where: { $0.folio == ModoCaptura.folioExpediente }) { ruta = [p] }
         case "alta": alta = ModoCaptura.altaInicial
-        case "escanear": escanear = true
+        case "escanear", "escanear-leyendo": escanear = true
         default: break
         }
     }
@@ -511,9 +511,13 @@ private struct YaVinieron: View {
 
     private func aviso(_ texto: String) -> some View {
         VStack(alignment: .leading, spacing: Tema.Espacio.m) {
-            Text(texto)
-                .font(.cuerpo).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: Tema.Espacio.m) {
+                Mascota(estado: .reposo, tamano: 56)
+                    .padding(.leading, -6) // el dibujo trae aire; así el expediente alinea con el margen
+                Text(texto)
+                    .font(.cuerpo).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Button(action: irAJornada) {
                 Label("Ir a Jornada", systemImage: "antenna.radiowaves.left.and.right")
                     .font(.seccion)

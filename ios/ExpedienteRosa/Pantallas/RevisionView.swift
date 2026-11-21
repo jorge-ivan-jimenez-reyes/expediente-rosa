@@ -88,7 +88,16 @@ struct RevisionView: View {
         case .seguimiento: "Ningún estudio anormal espera atención."
         }
         return ContentUnavailableView {
-            Label(error == nil ? "Nada por revisar" : "Sin conexión", systemImage: error == nil ? "checkmark.circle" : "wifi.exclamationmark")
+            // La mascota no va en Seguimiento: ahí se habla de estudios anormales.
+            if seccion == .seguimiento && error == nil {
+                Label("Nada por revisar", systemImage: "checkmark.circle")
+            } else {
+                Label {
+                    Text(error == nil ? "Nada por revisar" : "Sin conexión")
+                } icon: {
+                    Mascota(estado: error == nil ? .reposo : .sinSenal, tamano: 64)
+                }
+            }
         } description: {
             Text(error ?? texto)
         }
@@ -97,6 +106,7 @@ struct RevisionView: View {
 
     private func cargar() async {
         #if DEBUG
+        if ModoCaptura.pantalla == "revision-vacia" { return }
         if ModoCaptura.pantalla != nil {
             pares = ModoCaptura.paresDemo; conflictos = ModoCaptura.conflictosDemo; seguimiento = ModoCaptura.seguimientoDemo
             return

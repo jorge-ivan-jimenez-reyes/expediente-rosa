@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-80 -80 940 940" width="940" height="940">
+  <title>Mascota de Expediente Rosa</title>
+  <!--
+    Misma geometría que ios/ExpedienteRosa/Pantallas/Mascota.swift: el expediente del logo (624 × 560)
+    desplazado 78,110. El cuadro trae 80 de aire por lado para que la mano y la nube no se corten.
+    Estado de reposo, para fondo claro. Sin scripts: se anima con CSS desde fuera.
+    Usa transform-box: fill-box en todas las partes.
+      #cuerpo   respirar: scale(0.991, 1.022) ida y vuelta cada 3.4 s; transform-origin: 50% 100%
+      #mano     saludo: oculta (opacity 0, rotate(200deg)). Para saludar: opacity 1 y rotate(50deg) ± 17deg.
+                transform-origin: 38px 150px (pivote en la orilla derecha de la hoja; queda detrás de ella)
+      .ojo      parpadeo: scaleY(0.12) ~130 ms cada 3–5 s; transform-origin: center
+      #ojos     mirar a los lados: translateX(±34px)
+      #mejillas, #boca: la cara
+      #nube     sin señal: opacity 1 (oculta por defecto)
+    Colores: #C4006A rosa de la marca; en fondo oscuro la hoja de atrás, el borde y la mano usan #FF5FA8.
+    Nunca junto a resultados clínicos ni en avisos delicados.
+  -->  <g id="nube" opacity="0" fill="#AEAEB2">
+    <circle cx="579.8" cy="112.8" r="49.4"/>
+    <circle cx="655.2" cy="76.4" r="65"/>
+    <circle cx="722.8" cy="107.6" r="46.8"/>
+    <rect x="530.4" y="105" width="239.2" height="57.2" rx="28.6"/>
+  </g>
+  <g id="cuerpo">
+    <path id="hoja-atras" fill="#C4006A" d="M134 110 H298 Q322 110 336 130 L368 178 H646 Q702 178 702 234 V478 H78 V166 Q78 110 134 110 Z"/>
+    <rect id="mano" opacity="0" x="640" y="356" width="76" height="162" rx="38" fill="#C4006A" transform="rotate(200 678 506)"/>
+    <rect id="hoja" x="87" y="239" width="606" height="422" rx="47" fill="#FFFFFF" stroke="#C4006A" stroke-width="18"/>
+    <g id="mejillas" fill="#FF6FAE" fill-opacity="0.42">
+      <ellipse cx="196" cy="519" rx="48" ry="27"/>
+      <ellipse cx="584" cy="519" rx="48" ry="27"/>
+    </g>
+    <g id="ojos" fill="#C4006A">
+      <rect class="ojo" x="250" y="380" width="64" height="96" rx="32"/>
+      <rect class="ojo" x="466" y="380" width="64" height="96" rx="32"/>
+    </g>
+    <path id="boca" d="M360 506 Q390 532 420 506" fill="none" stroke="#C4006A" stroke-width="22" stroke-linecap="round"/>
+  </g>
+</svg>
