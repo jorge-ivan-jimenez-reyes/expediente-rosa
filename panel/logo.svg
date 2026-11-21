@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Expediente Rosa</title>
+  <!-- Fondo rosa a sangre: iOS recorta las esquinas del ícono. -->
+  <rect width="1024" height="1024" fill="#C4006A"/>
+  <!-- Expediente: pestaña y hoja de atrás (mismo ancho que la de enfrente) -->
+  <path d="M256 232 H420 Q444 232 458 252 L490 300 H768 Q824 300 824 356 V600 H200 V288 Q200 232 256 232 Z" fill="#FFFFFF" fill-opacity="0.5"/>
+  <!-- Hoja de enfrente -->
+  <rect x="200" y="352" width="624" height="440" rx="56" fill="#FFFFFF"/>
+  <!-- La paciente -->
+  <circle cx="512" cy="514" r="76" fill="#C4006A"/>
+  <path d="M376 724 C376 646 438 608 512 608 C586 608 648 646 648 724 Z" fill="#C4006A"/>
+</svg>

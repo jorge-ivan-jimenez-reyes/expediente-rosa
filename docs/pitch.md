@@ -1,4 +1,4 @@
-# Guion del pitch (2 minutos), versión 3
+# Guion del pitch (2 minutos), versión 5
 
 Orden: la paciente que regresa primero, luego la nueva, sincronizar y el tablero. Cubre lo que pide el Reto 1: alta de una paciente ficticia, búsqueda con detección de coincidencia, segunda visita con historial, trabajo sin conexión verificable y explicación del control de acceso. Son unas 300 palabras habladas.
 
@@ -11,17 +11,20 @@ Orden: la paciente que regresa primero, luego la nueva, sincronizar y el tablero
 
 ## Guion
 
+Hilo: una sola semana de una brigada, contada con día y hora. Personas ficticias (Eulalia, Adela, la enfermera Rocío); el problema y las cifras de EIRA son reales. Poner «Personas ficticias» en la diapositiva 1.
+
 | Tiempo | En pantalla | Se dice |
 |---|---|---|
-| 0:00–0:25 | Diapositiva 1 o nada | «Marzo de 2025, San Martín Peras, Oaxaca. A Eulalia, de 66 años, le sale una mastografía BI-RADS 4 y la mandan a Huajuapan. El resultado queda en una hoja de papel, en una caja en Ciudad Guzmán. Hoy la brigada regresa, a siete horas de camino y sin señal. EIRA nos contó esta mañana que una mujer que va cuatro veces en un año puede quedar registrada cuatro veces. Eulalia es ficticia; el problema es el que nos contaron.» |
-| 0:25–0:50 | iPhone en modo avión → Buscar: «Eulalia», «Garsia», «Luna», 67 → aparece Eulalia García Luna con puntaje, razones y línea de IA | «Este iPhone está en modo avión. La enfermera escribe García con s y pone 67 años, porque no sabe la fecha. La app encuentra a Eulalia García Luna y dice por qué: nombre parecido, misma edad, misma comunidad. El modelo de Apple, que corre en el teléfono, lo explica en una línea. La enfermera confirma; la app nunca une expedientes sola.» |
-| 0:50–1:05 | «Es ella» → expediente como Enfermería (resultados con candado) → cambiar a Médico → BI-RADS 4 → Agregar estudio | «La enfermera no ve resultados. Cambio a médico: ahí está el BI-RADS 4 de marzo y la referencia a Huajuapan sin cerrar. El médico registra la mastografía de hoy en una visita nueva.» |
-| 1:05–1:20 | Buscar → «Es nueva» → Adela Ruiz Pacheco, 44 → consentimiento → firma → Guardar → folio | «Después llega Adela, que nunca ha venido. Pedimos nombre, apellidos, edad y comunidad; no pedimos domicilio, teléfono ni CURP. Sin su firma la app no guarda, y el folio sale sin señal.» |
-| 1:20–1:40 | Jornada: «2 pendientes» → quitar modo avión → Sincronizar → nuevos / ya estaban | «Quito el modo avión y sincronizo: dos registros. Si la señal se corta y se repite el envío, Valkey reconoce cada registro por su llave y no lo duplica. Eulalia entra sola a la lista de seguimiento como vencida.» |
-| 1:40–1:55 | Panel web en la Mac: tablero de San Martín Peras → Patología | «Al regresar, coordinación ve esto: San Martín Peras, [N] personas, [N] estudios y los papanicolaous que esperan al patólogo. El patólogo captura el resultado aquí y, si sale anormal, también entra a seguimiento.» |
-| 1:55–2:00 | Diapositiva de arquitectura | «La IA corre en el teléfono y los datos de salud no salen a la nube para usarla. El repo es público, con licencia MIT.» |
+| 0:00–0:10 | Portada | «Les presentamos Expediente Rosa, un ecosistema para administrar los expedientes de las pacientes de EIRA: una app en el teléfono de la brigada y un panel web para coordinación y patología. Funciona aunque pasen días sin señal.» |
+| 0:10–0:28 | Diapositiva: la semana de una brigada | «Martes, nueve y cuarenta. San Martín Peras, en la Mixteca de Oaxaca. La brigada lleva dos días sin señal. La enfermera Rocío atiende a Eulalia García Luna, de 67 años. En marzo de 2025, a Eulalia le salió una mastografía BI-RADS 4 y la mandaron a Huajuapan. Ese resultado está en una hoja de papel, en una caja en Ciudad Guzmán. Rocío no lo sabe.» |
+| 0:28–0:50 | iPhone en modo avión → Buscar: «Eulalia», «Garsia», «Luna», 67 → aparece Eulalia García Luna con puntaje, razones y línea de IA | «Rocío escribe García con s y pone 67, porque Eulalia no sabe su fecha de nacimiento. Este iPhone está en modo avión. La app la encuentra y dice por qué: nombre parecido, misma edad, misma comunidad. El modelo de Apple, que corre aquí mismo, lo explica en una línea. Rocío confirma que es ella; la app nunca une expedientes sola.» |
+| 0:50–1:04 | «Es ella» → expediente como Enfermería (candado) → cambiar a Médico → BI-RADS 4 → Agregar estudio | «Rocío no ve resultados. El médico sí: ve el BI-RADS 4 y la referencia que nunca se cerró, y registra la mastografía de hoy en una visita nueva.» |
+| 1:04–1:15 | Buscar → «Es nueva» → Adela Ruiz Pacheco, 44 → firma → Guardar | «Detrás de Eulalia viene Adela, de 44, que nunca ha venido. Nombre, apellidos, edad, comunidad y su firma. Sin firma no se guarda.» |
+| 1:15–1:35 | Jornada «2 pendientes» → quitar modo avión → Sincronizar | «Jueves, seis y veinte de la tarde. La camioneta llega a Juxtlahuaca y vuelve la señal. Rocío sincroniza. Si la señal se corta a la mitad, Valkey reconoce cada registro por su llave y no lo duplica. Eulalia entra a la lista de seguimiento como vencida.» |
+| 1:35–1:52 | Panel web: San Martín Peras → Patología | «Viernes, Ciudad Guzmán. Coordinación ve San Martín Peras: trece mujeres, sus estudios y tres papanicolaous esperando al patólogo. El patólogo los interpreta desde aquí; si alguno sale anormal, entra a seguimiento igual que Eulalia.» |
+| 1:52–2:00 | Diapositiva de arquitectura | «La próxima vez que la brigada suba a San Martín Peras, el teléfono de Rocío ya trae el resultado. El código es público, con licencia MIT.» |
 
-Las cifras entre corchetes se llenan con lo que muestre el tablero después del seed.
+Cifras del tablero verificadas con el seed (21-nov, 12:05): San Martín Peras 12 personas + Adela = 13; 3 papanicolaous en laboratorio. Si el médico agrega un papanicolaou en la demo, serán 4: decirlo como lo muestre la pantalla.
 
 ## Si preguntan
 

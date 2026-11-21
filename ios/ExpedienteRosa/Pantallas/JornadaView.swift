@@ -35,6 +35,7 @@ struct JornadaView: View {
                             .frame(minHeight: Tema.toque)
                     }
                     servidor
+                    ParaEIRA().padding(.top, Tema.Espacio.l)
                 }
                 .padding(Tema.Espacio.l)
                 .animation(Tema.resorte, value: resultado?.aplicados)
