@@ -163,6 +163,9 @@
     .entra, .activa .entra { opacity: 1; transform: none; transition: none; }
     #progreso, .cromo { transition: none; }
   }
+  .roles.pedidos { margin-top: 36px; }
+  .roles.pedidos td { padding: 16px 32px 16px 0; font-size: 25px; line-height: 1.3; }
+  .roles.pedidos td:first-child { font-size: 30px; line-height: 34px; }
 </style>
 </head>
 <body>
@@ -305,7 +308,7 @@
   <!-- Lo que pidió EIRA -->
   <section class="slide" aria-label="Lo que pidió EIRA">
     <h2>Lo que pidió EIRA en el Reto 1</h2>
-    <table class="roles">
+    <table class="roles pedidos">
       <thead><tr><th scope="col">Pidió</th><th scope="col">Cómo quedó</th></tr></thead>
       <tbody>
         <tr class="entra" style="--d:0"><td>Identificador estable por paciente</td><td>ID interno y folio que se generan en el teléfono, sin señal</td></tr>
