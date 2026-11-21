@@ -8,7 +8,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: DM6LT3HA8M
     CODE_SIGN_STYLE: Automatic
 targets:
   ExpedienteRosa:
