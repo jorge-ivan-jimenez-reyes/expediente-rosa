@@ -12,7 +12,7 @@ services:
       VALKEY_URL: redis://valkey:6379
       PORT: "8787"
     ports: ["8787:8787"]
-    volumes: [./api:/api, /api/node_modules]
+    volumes: [./api:/api, /api/node_modules, ./panel:/panel:ro]
     depends_on: [valkey]
 volumes:
   valkey:

@@ -507,6 +507,13 @@
           "fecha": "2026-11-18",
           "resultado": "normal",
           "registradoPor": "med-jux"
+        },
+        {
+          "id": "da9dd488-6636-54d2-b603-8ca928490488",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-18",
+          "resultado": "pendiente",
+          "registradoPor": "med-jux"
         }
       ]
     },
@@ -698,6 +705,13 @@
           "fecha": "2026-11-19",
           "resultado": "pendiente",
           "registradoPor": "med-met"
+        },
+        {
+          "id": "c0ee8e6f-b60f-56f9-9ad5-d7eedbe16238",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-19",
+          "resultado": "pendiente",
+          "registradoPor": "med-met"
         }
       ]
     },
@@ -812,6 +826,13 @@
         {
           "id": "d0e8a072-3dbf-56e9-a217-db4c72234e83",
           "tipo": "mastografia",
+          "fecha": "2026-11-20",
+          "resultado": "pendiente",
+          "registradoPor": "med-hue"
+        },
+        {
+          "id": "4c692c93-0dfb-5760-8162-7d296790ecf1",
+          "tipo": "papanicolaou",
           "fecha": "2026-11-20",
           "resultado": "pendiente",
           "registradoPor": "med-hue"

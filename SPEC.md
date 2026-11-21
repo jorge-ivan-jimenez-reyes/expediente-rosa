@@ -110,3 +110,22 @@ Eventos nuevos de `POST /sync`:
 ```
 
 `campos` acepta solo: `nombre`, `apellidoPaterno`, `apellidoMaterno`, `nacimiento`, `edad`, `comunidad`, `municipio`, `entidadNacimiento`, `idEira` (no se puede borrar un campo, solo cambiarlo). Si `versionBase` es la versión actual, se aplican solo esos campos, `version` sube 1 y se mueven los índices (bloques, comunidad, vector). Si no, no se toca nada: queda en `/conflictos` para la coordinadora. La comparación y el cambio corren en un script Lua, así que dos envíos al mismo tiempo no se pisan.
+
+### Brigada: estado, patología y resumen al regresar
+
+Lo pidió EIRA: al volver una brigada quieren ver cuántas personas atendieron por estado, y el papanicolaou se toma en campo y lo interpreta un patólogo después. Todo es opcional o nuevo; ningún contrato anterior cambió.
+
+- `Visita`: `estado?` (entidad federativa de la jornada, p. ej. «Jalisco») y `jornada?` (p. ej. «San Martín Peras · nov 2026»).
+- **Estado efectivo** (para agregados): el de la visita del estudio; para la paciente, el de su visita más reciente que lo traiga; si no hay, lo que va después de la última coma en `municipio` («San Martín Peras, Oaxaca» → «Oaxaca»); si no, «Sin estado». Filtros sin distinguir mayúsculas ni acentos.
+- `Estudio`: `etapa?`: `tomado` \| `en-laboratorio` \| `interpretado` \| `avisado`. Si no viene: papanicolaou `pendiente` → `en-laboratorio`; `normal`/`anormal` → `interpretado`; lo demás `pendiente` → `tomado`. Se guarda al sincronizar; los estudios viejos la reciben al leer, así que `GET /pacientes` ya la trae siempre. El servidor agrega después `interpretadoPor`, `interpretadoEn`, `cedula?`, `avisadoPor`, `avisadoEn`.
+- Valkey: sorted set `patologia:pendientes` (score = fecha de toma) y hash `estudios:paciente` (estudioId → pacienteId). `preparar()` los llena una vez para lo ya cargado (bandera `migracion:patologia-v1`).
+
+| Método y ruta | Devuelve |
+|---|---|
+| `GET /patologia?estado=&comunidad=` | Estudios en `en-laboratorio`, el que más espera primero: `[{ estudio{id, tipo, fecha, etapa}, paciente{id, folio, nombre, apellidoPaterno, apellidoMaterno, edad, comunidad}, estado, diasEsperando }]` |
+| `POST /estudios/:id/interpretacion` | Body `{ resultado: 'normal' \| 'anormal', clasificacion?: string (Bethesda: «Negativa», «ASC-US», «LSIL», «HSIL», «ASC-H», «AGC», «Carcinoma»), nota?: string ≤500, patologo: string, cedula?: string }` → `{ ok, seguimiento, estudio }`. Guarda resultado, clasificación, nota (cifrada), `etapa: 'interpretado'`, `interpretadoPor`, `interpretadoEn`; lo saca de `patologia:pendientes`. Si es anormal o la Bethesda no es «Negativa» (ni NILM), entra a `/seguimiento` con límite = hoy + 15 días y motivo «Bethesda X» o «resultado anormal». Bitácora `interpretacion` con autor = patólogo, pacienteId y estudioId, sin datos clínicos. 400 cuerpo inválido, 404 no existe, 409 ya interpretado o avisado |
+| `POST /estudios/:id/avisado` | Body `{ autor? }` (por omisión «brigada») → `{ ok, estudio }` con `etapa: 'avisado'`, `avisadoPor`, `avisadoEn`; bitácora `avisado`. 404 no existe, 409 si aún no está interpretado o ya estaba avisado |
+| `GET /resumen?estado=&comunidad=` | `{ corte, filtros{estado?, comunidad?}, personasUnicas, visitas, estudios{ total, porTipo{mastografia, ultrasonido, papanicolaou, exploracion}, porResultado{normal, anormal, pendiente}, porEtapa{tomado, 'en-laboratorio', interpretado, avisado} }, anormales, pendientesPatologia, seguimientoVencido, duplicadosPendientes, porEstado[{estado, personas, estudios, anormales, pendientesPatologia}], porComunidad[{comunidad, estado, personas, estudios, anormales, pendientesPatologia}] }`. Personas = pacientes sin `fusionadaEn` (un par pendiente cuenta 2; `duplicadosPendientes` lo dice). Personas por estado/comunidad de la paciente; estudios por los de su visita. Con filtro, seguimiento vencido y duplicados cuentan solo los de las pacientes que entran. Grupos ordenados por personas |
+| `GET /panel`, `GET /panel/*` | Panel web estático de la carpeta `panel/` (raíz del repo; `PANEL_DIR` lo cambia). `/panel` redirige a `/panel/` (`index.html`). En docker, `docker-compose.yml` monta `./panel:/panel` |
+
+`tipo` de la bitácora suma `interpretacion` y `avisado`. El seed manda una visita por paciente y día de estudios con `estado` (Jalisco, Oaxaca, Guerrero) y `jornada`, y deja 7 papanicolaous en laboratorio.
