@@ -1,7 +1,7 @@
 // Datos ficticios para el panel. Solo se cargan si la API responde 404
 // (endpoint todavía no existe) o no hay API. Nombres inventados; las
 // comunidades son reales solo como lugar. Responde con la misma forma que
-// el contrato de /api/resumen, /api/patologia, /api/seguimiento y /api/bitacora.
+// el contrato de /api/resumen, /api/patologia, /api/seguimiento, /api/bitacora y /api/jornadas.
 (function () {
   'use strict';
 
@@ -199,6 +199,39 @@
     return { status: 200, datos: { ...p, estudios: estudios.filter((e) => e.pacienteId === id), visitas: visitas.filter((v) => v.pacienteId === id) } };
   }
 
+  // Jornadas programadas (misma forma que GET/POST/DELETE /api/jornadas).
+  const jornadas = [
+    { comunidad: 'San Martín Peras', estado: 'Oaxaca', municipio: 'San Martín Peras, Oaxaca', fecha: '2026-11-25', equipo: ['Dra. Laura Méndez', 'Enf. Rosa Ortiz'], nota: null },
+    { comunidad: 'Huejuquilla', estado: 'Jalisco', municipio: 'Huejuquilla el Alto, Jalisco', fecha: '2026-12-02', equipo: [], nota: null },
+    { comunidad: 'Metlatónoc', estado: 'Guerrero', municipio: 'Metlatónoc, Guerrero', fecha: '2026-12-09', equipo: [], nota: null },
+  ].map((j) => ({ id: uuid(), autor: 'Coordinación EIRA', creada: new Date(HOY - 2 * DIA).toISOString(), ...j }));
+  const conConteos = (j) => {
+    const ps = pacientes.filter((p) => norm(p.comunidad) === norm(j.comunidad));
+    const ids = new Set(ps.map((p) => p.id));
+    const pend = estudios.filter((e) => ids.has(e.pacienteId) && (e.etapa === 'en-laboratorio' || enSeguimiento(e))).length;
+    return { ...j, pacientesPrevias: ps.length, estudiosPendientes: pend };
+  };
+  function listaJornadas(q) {
+    const desde = Date.parse((q.desde || dia(Date.now())) + 'T00:00:00-06:00');
+    const hasta = desde + (Number(q.dias) || 30) * DIA;
+    return jornadas.filter((j) => { const t = Date.parse(j.fecha + 'T00:00:00-06:00'); return t >= desde && t < hasta; })
+      .sort((a, b) => a.fecha.localeCompare(b.fecha)).map(conConteos);
+  }
+  function programar(c) {
+    if (!c || !c.comunidad || !c.estado || !/^\d{4}-\d{2}-\d{2}$/.test(c.fecha || '') || !c.autor) return { status: 400, datos: { error: 'cuerpo inválido' } };
+    const j = { id: uuid(), comunidad: c.comunidad, estado: c.estado, municipio: c.municipio || null, fecha: c.fecha, equipo: c.equipo || [], nota: c.nota || null, autor: c.autor, creada: new Date().toISOString() };
+    jornadas.push(j);
+    bitacora.unshift({ id: `${Date.now()}-0`, cuando: j.creada, tipo: 'jornada-programada', autor: c.autor, dispositivo: null, pacienteId: null, jornadaId: j.id, comunidad: j.comunidad });
+    return { status: 201, datos: j };
+  }
+  function cancelar(id, q) {
+    const i = jornadas.findIndex((j) => j.id === id);
+    if (i < 0) return { status: 404, datos: { error: 'no existe' } };
+    const [j] = jornadas.splice(i, 1);
+    bitacora.unshift({ id: `${Date.now()}-0`, cuando: new Date().toISOString(), tipo: 'jornada-cancelada', autor: q.autor || 'coordinadora', dispositivo: null, pacienteId: null, jornadaId: id, comunidad: j.comunidad });
+    return { status: 200, datos: { ok: true } };
+  }
+
   // Enrutador con la misma forma que la API: (método, ruta con query, cuerpo) → { status, datos }.
   function responder(metodo, ruta, cuerpo) {
     const url = new URL(ruta, 'http://ejemplo');
@@ -209,6 +242,9 @@
     if (metodo === 'GET' && partes[0] === 'seguimiento') return { status: 200, datos: seguimiento(q) };
     if (metodo === 'GET' && partes[0] === 'bitacora') return { status: 200, datos: bitacora.slice(0, Number(q.limite) || 50) };
     if (metodo === 'GET' && partes[0] === 'pacientes' && partes[1]) return paciente(partes[1]);
+    if (metodo === 'GET' && partes[0] === 'jornadas') return { status: 200, datos: listaJornadas(q) };
+    if (metodo === 'POST' && partes[0] === 'jornadas') return programar(cuerpo);
+    if (metodo === 'DELETE' && partes[0] === 'jornadas' && partes[1]) return cancelar(partes[1], q);
     if (metodo === 'POST' && partes[0] === 'estudios' && partes[2] === 'interpretacion') return interpretar(partes[1], cuerpo || {});
     if (metodo === 'POST' && partes[0] === 'estudios' && partes[2] === 'avisado') return avisado(partes[1], cuerpo);
     if (metodo === 'POST' && partes[0] === 'seguimiento' && partes[2] === 'atendido') return avisado(partes[1], cuerpo);

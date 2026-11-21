@@ -139,6 +139,7 @@
   // ---------- Rutas ----------
   const VISTAS_COORD = [
     { id: 'tablero', titulo: 'Tablero' },
+    { id: 'jornadas', titulo: 'Jornadas' },
     { id: 'seguimiento', titulo: 'Seguimiento' },
     { id: 'bitacora', titulo: 'Bitácora' },
   ];
@@ -165,6 +166,7 @@
     pintarBarra(ruta);
     vista.replaceChildren();
     if (ruta === 'tablero') limpiar = await vistaTablero(vista, q) || limpiar;
+    if (ruta === 'jornadas') limpiar = await vistaJornadas(vista) || limpiar;
     if (ruta === 'patologia') limpiar = await vistaPatologia(vista) || limpiar;
     if (ruta === 'seguimiento') limpiar = await vistaSeguimiento(vista, q) || limpiar;
     if (ruta === 'bitacora') limpiar = await vistaBitacora(vista) || limpiar;
@@ -597,6 +599,277 @@
     await cargar();
   }
 
+  // ---------- Jornadas programadas ----------
+  // Coordinación dice a qué comunidad va la brigada y cuándo. Los teléfonos
+  // bajan solos a las pacientes de esa comunidad antes de salir.
+  const DIAS_JORNADAS = 60;
+  const fechaDia = (dia) => new Date(dia + 'T12:00:00-06:00');
+  const partesFecha = (dia) => {
+    const d = fechaDia(dia);
+    const f = (o) => new Intl.DateTimeFormat('es-MX', { ...o, timeZone: TZ }).format(d).replace('.', '');
+    return { semana: f({ weekday: 'short' }), dia: f({ day: 'numeric' }), mes: f({ month: 'short' }), largo: f({ weekday: 'long', day: 'numeric', month: 'long' }) };
+  };
+  const hoyDia = () => diaDe(new Date().toISOString());
+  const diasHasta = (dia) => Math.round((fechaDia(dia) - fechaDia(hoyDia())) / 86400000);
+  const faltan = (dia) => {
+    const k = diasHasta(dia);
+    if (k === 0) return 'Hoy';
+    if (k === 1) return 'Mañana';
+    if (k < 0) return `Hace ${plural(-k, 'día', 'días')}`;
+    return `En ${plural(k, 'día', 'días')}`;
+  };
+
+  async function vistaJornadas(vista) {
+    document.title = 'Jornadas · Expediente Rosa';
+    let jornadas = [], comunidades = [], cerrado = false;
+    const autor = `${usuario.nombre} (coordinación)`;
+
+    const meta = h('span', {}, 'Cargando…');
+    const ejemplo = h('span', { class: 'pildora ejemplo', hidden: true, title: 'La API todavía no tiene /api/jornadas' }, h('span', { class: 'punto' }), 'Datos de ejemplo');
+    const programar = h('button', { class: 'boton principal', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'form-jornada', onclick: () => abrirForm() },
+      'Programar jornada');
+    const formCaja = h('div', { id: 'form-jornada', class: 'form-jornada-caja', hidden: true });
+    const ul = h('ol', { class: 'jornadas', 'aria-label': 'Próximas jornadas, por fecha' });
+    const cuerpo = h('section', { class: 'panel lista-jornadas', 'aria-live': 'polite' }, esqueletoJornadas());
+
+    vista.append(
+      h('div', { class: 'encabezado' },
+        h('div', {}, h('h1', {}, 'Jornadas'), h('p', { class: 'meta' }, meta, ejemplo)),
+        h('div', { class: 'derecha' }, programar)),
+      formCaja,
+      cuerpo,
+    );
+
+    async function cargar() {
+      const [rj, rr] = await Promise.all([
+        pedir(conQuery('/api/jornadas', { dias: String(DIAS_JORNADAS) })),
+        pedir('/api/resumen'),
+      ]);
+      if (cerrado) return;
+      if (rr.ok) comunidades = (rr.datos?.porComunidad || []).filter((c) => c.estado !== 'Sin estado');
+      if (!rj.ok) {
+        cuerpo.replaceChildren(h('p', { class: 'error' }, `No se pudieron leer las jornadas (${rj.status}). `), h('button', { class: 'boton secundario chico', type: 'button', onclick: cargar }, 'Reintentar'));
+        meta.textContent = '';
+        return;
+      }
+      ejemplo.hidden = !rj.ejemplo;
+      jornadas = (rj.datos || []).slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
+      pintar();
+    }
+
+    function contar() {
+      meta.textContent = jornadas.length
+        ? `${plural(jornadas.length, 'jornada', 'jornadas')} en los próximos ${DIAS_JORNADAS} días. Los teléfonos de la brigada bajan solos a las pacientes de cada comunidad antes de salir.`
+        : `Próximos ${DIAS_JORNADAS} días.`;
+      marcarCuenta('jornadas', jornadas.length || null);
+    }
+
+    function pintar() {
+      contar();
+      if (!jornadas.length) { cuerpo.replaceChildren(vacio()); return; }
+      ul.replaceChildren(...jornadas.map((j, i) => fila(j, i === 0)));
+      cuerpo.replaceChildren(ul);
+    }
+
+    const vacio = () => h('div', { class: 'vacio-vista' },
+      h('b', {}, 'Sin jornadas programadas'),
+      h('p', {}, 'Programa la siguiente. Los teléfonos de la brigada bajan a las pacientes de esa comunidad antes de salir.'),
+      h('button', { class: 'boton secundario', type: 'button', onclick: () => abrirForm() }, 'Programar jornada'));
+
+    function fila(j, siguiente) {
+      const f = partesFecha(j.fecha);
+      const li = h('li', { class: 'jornada' + (siguiente ? ' siguiente' : ''), 'data-id': j.id, tabindex: '-1' });
+      const mostrarMunicipio = j.municipio && clave(j.municipio) !== clave(`${j.comunidad}, ${j.estado}`) && clave(j.municipio) !== clave(j.comunidad);
+      const pend = j.estudiosPendientes ?? 0;
+      const accion = h('div', { class: 'accion' });
+      const pintarAccion = () => accion.replaceChildren(h('button', {
+        class: 'boton quieto', type: 'button', 'aria-label': `Cancelar la jornada en ${j.comunidad} del ${f.largo}`,
+        onclick: () => confirmar(),
+      }, 'Cancelar'));
+      function confirmar() {
+        let reloj;
+        const no = h('button', { class: 'boton quieto', type: 'button', onclick: () => { clearTimeout(reloj); pintarAccion(); accion.querySelector('button').focus(); } }, 'No');
+        const si = h('button', { class: 'boton peligro chico', type: 'button', onclick: async () => {
+          clearTimeout(reloj);
+          si.disabled = true; no.disabled = true; si.setAttribute('aria-busy', 'true'); si.textContent = 'Cancelando…';
+          const r = await pedir(conQuery(`/api/jornadas/${encodeURIComponent(j.id)}`, { autor }), { metodo: 'DELETE' });
+          if (r.ok || r.status === 404) {
+            avisar(`Jornada en ${j.comunidad} cancelada.`, { tipo: 'normal', detalle: r.ok ? 'Queda en la bitácora.' : 'Ya estaba cancelada.' });
+            jornadas.splice(jornadas.indexOf(j), 1);
+            await sacar(li);
+            if (jornadas.length) ul.querySelectorAll('.jornada').forEach((x, i) => x.classList.toggle('siguiente', i === 0));
+            pintarSiHaceFalta();
+          } else {
+            avisar('No se canceló la jornada.', { tipo: 'error', detalle: `La API respondió ${r.status}. Intenta otra vez.` });
+            pintarAccion();
+          }
+        } }, 'Sí, cancelar');
+        accion.replaceChildren(h('div', { class: 'confirmar', role: 'group', 'aria-label': `Confirmar cancelación de ${j.comunidad}` },
+          h('span', { class: 'pregunta' }, `¿Cancelar ${j.comunidad}?`), si, no));
+        no.focus();
+        accion.onkeydown = (ev) => { if (ev.key === 'Escape') no.click(); };
+        reloj = setTimeout(() => { if (accion.contains(no) && !si.disabled) pintarAccion(); }, 6000);
+      }
+      pintarAccion();
+
+      li.append(
+        h('div', { class: 'fecha-bloque', 'aria-hidden': 'true' },
+          h('span', { class: 'semana' }, f.semana), h('b', {}, f.dia), h('span', { class: 'mes' }, f.mes)),
+        h('div', { class: 'que' },
+          h('div', { class: 'linea-1' },
+            h('h2', {}, h('span', { class: 'solo-lector' }, `${f.largo}: `), j.comunidad),
+            h('span', { class: 'pildora faltan' }, faltan(j.fecha))),
+          h('p', { class: 'donde' }, [j.estado, mostrarMunicipio ? j.municipio : null].filter(Boolean).join(' · ')),
+          j.equipo?.length ? h('p', { class: 'equipo' }, h('span', { class: 'tenue' }, 'Equipo: '), j.equipo.join(', ')) : null,
+          j.nota ? h('p', { class: 'nota-jornada' }, j.nota) : null),
+        h('dl', { class: 'conteos' },
+          h('div', {}, h('dt', {}, 'Pacientes con expediente'), h('dd', { 'data-conteo': 'previas' }, n(j.pacientesPrevias ?? 0))),
+          h('div', { class: 'pendientes' + (pend ? ' hay' : ''), 'data-caja': 'pendientes', title: 'Papanicolaous en laboratorio y resultados anormales sin avisar' }, h('dt', {}, icono('pendiente'), 'Estudios pendientes'), h('dd', { 'data-conteo': 'pendientes' }, n(pend)))),
+        accion,
+      );
+      return li;
+    }
+    function pintarSiHaceFalta() { contar(); if (!jornadas.length) cuerpo.replaceChildren(vacio()); }
+
+    // ----- Formulario corto, en línea arriba de la lista -----
+    function abrirForm() {
+      if (!formCaja.hidden) { formCaja.querySelector('select, input')?.focus(); return; }
+      programar.setAttribute('aria-expanded', 'true');
+      formCaja.replaceChildren(formulario());
+      formCaja.hidden = false;
+      formCaja.querySelector('select').focus();
+    }
+    function cerrarForm() {
+      formCaja.hidden = true;
+      formCaja.replaceChildren();
+      programar.setAttribute('aria-expanded', 'false');
+      programar.focus();
+    }
+
+    function formulario() {
+      const estados = [...new Set([...ESTADOS, ...comunidades.map((c) => c.estado)])].sort((a, b) => a.localeCompare(b, 'es'));
+      const selEstado = h('select', { name: 'estado', required: true },
+        h('option', { value: '' }, 'Elige un estado'), estados.map((e) => h('option', { value: e }, e)));
+      const lista = h('datalist', { id: 'comunidades-sugeridas' });
+      const comunidad = h('input', { name: 'comunidad', list: 'comunidades-sugeridas', required: true, autocomplete: 'off', maxlength: '80', placeholder: 'Escribe o elige' });
+      const pista = h('small', { class: 'pista', id: 'pista-comunidad' }, ' ');
+      comunidad.setAttribute('aria-describedby', 'pista-comunidad');
+      const fecha = h('input', { name: 'fecha', type: 'date', required: true, min: hoyDia() });
+      const equipo = h('input', { name: 'equipo', autocomplete: 'off', maxlength: '400', placeholder: 'Ej. Dra. Laura Méndez, Enf. Rosa Ortiz' });
+      const nota = h('input', { name: 'nota', autocomplete: 'off', maxlength: '300', placeholder: 'Ej. Salida de Ciudad Guzmán a las 6:00' });
+      const guardar = h('button', { class: 'boton principal', type: 'submit', disabled: true }, 'Guardar jornada');
+      const falta = h('span', { class: 'falta' });
+      const errorEl = h('p', { class: 'error', role: 'alert', hidden: true });
+      let guardando = false;
+
+      const conocida = () => comunidades.find((c) => clave(c.comunidad) === clave(comunidad.value));
+      const llenarLista = () => lista.replaceChildren(...comunidades
+        .filter((c) => !selEstado.value || c.estado === selEstado.value)
+        .sort((a, b) => a.comunidad.localeCompare(b.comunidad, 'es'))
+        .map((c) => h('option', { value: c.comunidad }, `${c.estado} · ${plural(c.personas, 'paciente', 'pacientes')}`)));
+      const revisar = () => {
+        const c = conocida();
+        if (c && !selEstado.value) { selEstado.value = c.estado; llenarLista(); }
+        pista.textContent = !comunidad.value.trim() ? ' '
+          : c ? `${plural(c.personas, 'paciente tiene', 'pacientes tienen')} expediente en ${c.comunidad}.`
+          : 'Comunidad nueva: todavía no hay pacientes registradas.';
+        const faltantes = [!selEstado.value && 'estado', !comunidad.value.trim() && 'comunidad', !fecha.value && 'fecha'].filter(Boolean);
+        const pasada = fecha.value && fecha.value < hoyDia();
+        guardar.disabled = guardando || faltantes.length > 0 || pasada;
+        falta.textContent = pasada ? 'La fecha ya pasó' : faltantes.length ? `Falta: ${faltantes.join(', ')}` : '';
+      };
+      selEstado.addEventListener('change', () => { llenarLista(); revisar(); });
+      for (const el of [comunidad, fecha]) { el.addEventListener('input', revisar); el.addEventListener('change', revisar); }
+      llenarLista(); revisar();
+
+      const form = h('form', {
+        class: 'panel form-jornada', 'aria-labelledby': 't-form-jornada',
+        onkeydown: (ev) => { if (ev.key === 'Escape') cerrarForm(); },
+        onsubmit: async (ev) => {
+          ev.preventDefault();
+          revisar();
+          if (guardar.disabled) return;
+          guardando = true; guardar.setAttribute('aria-busy', 'true'); guardar.textContent = 'Guardando…'; errorEl.hidden = true;
+          const c = conocida();
+          const cuerpoJ = {
+            comunidad: c ? c.comunidad : comunidad.value.trim(),
+            estado: selEstado.value,
+            fecha: fecha.value,
+            equipo: equipo.value.split(',').map((x) => x.trim()).filter(Boolean),
+            autor,
+          };
+          if (nota.value.trim()) cuerpoJ.nota = nota.value.trim();
+          const r = await pedir('/api/jornadas', { metodo: 'POST', cuerpo: cuerpoJ });
+          guardando = false; guardar.removeAttribute('aria-busy'); guardar.textContent = 'Guardar jornada';
+          if (!r.ok) {
+            errorEl.textContent = `No se guardó (${r.status}). ${typeof r.datos?.error === 'string' ? r.datos.error : 'Revisa los datos e intenta otra vez.'}`;
+            errorEl.hidden = false; revisar();
+            return;
+          }
+          if (r.ejemplo) ejemplo.hidden = false;
+          // La lista trae los conteos; si el POST no los trae, se toman del resumen.
+          const j = { pacientesPrevias: c ? c.personas : 0, estudiosPendientes: 0, ...r.datos };
+          cerrarForm();
+          agregar(j);
+          const largo = partesFecha(j.fecha).largo;
+          avisar(`Jornada en ${j.comunidad} programada.`, { tipo: 'normal', detalle: largo[0].toUpperCase() + largo.slice(1) + '.' });
+          // Conteos reales de pendientes desde la lista.
+          refrescarConteos(j.id);
+        },
+      },
+        h('div', { class: 'panel-cabeza' }, h('h2', { class: 'panel-titulo', id: 't-form-jornada' }, 'Nueva jornada')),
+        h('div', { class: 'campos-jornada' },
+          h('label', { class: 'campo' }, h('span', {}, 'Estado'), selEstado),
+          h('label', { class: 'campo' }, h('span', {}, 'Comunidad'), comunidad, pista),
+          h('label', { class: 'campo' }, h('span', {}, 'Fecha'), fecha),
+          h('label', { class: 'campo ancho' }, h('span', {}, 'Equipo (opcional, separado por comas)'), equipo),
+          h('label', { class: 'campo ancho' }, h('span', {}, 'Nota (opcional)'), nota)),
+        lista,
+        h('div', { class: 'acciones' }, guardar, h('button', { class: 'boton quieto', type: 'button', onclick: cerrarForm }, 'Cerrar'), falta),
+        errorEl,
+      );
+      return form;
+    }
+
+    function agregar(j) {
+      jornadas.push(j);
+      jornadas.sort((a, b) => a.fecha.localeCompare(b.fecha));
+      if (!ul.isConnected) cuerpo.replaceChildren(ul);
+      const i = jornadas.indexOf(j);
+      const li = fila(j, i === 0);
+      li.classList.add('nueva');
+      const antes = ul.children[i];
+      ul.insertBefore(li, antes || null);
+      ul.querySelectorAll('.jornada').forEach((x, k) => x.classList.toggle('siguiente', k === 0));
+      contar();
+      li.scrollIntoView({ behavior: reducido.matches ? 'auto' : 'smooth', block: 'nearest' });
+      li.focus({ preventScroll: true });
+      setTimeout(() => li.classList.remove('nueva'), 2000);
+    }
+
+    async function refrescarConteos(id) {
+      const r = await pedir(conQuery('/api/jornadas', { dias: String(DIAS_JORNADAS) }));
+      if (cerrado || !r.ok) return;
+      const x = (r.datos || []).find((y) => y.id === id);
+      const j = jornadas.find((y) => y.id === id);
+      if (!x || !j) return;
+      j.pacientesPrevias = x.pacientesPrevias; j.estudiosPendientes = x.estudiosPendientes;
+      const li = ul.querySelector(`li[data-id="${CSS.escape(id)}"]`);
+      if (!li) return;
+      li.querySelector('[data-conteo="previas"]').textContent = n(j.pacientesPrevias);
+      li.querySelector('[data-conteo="pendientes"]').textContent = n(j.estudiosPendientes);
+      li.querySelector('[data-caja="pendientes"]').classList.toggle('hay', j.estudiosPendientes > 0);
+    }
+
+    await cargar();
+    return () => { cerrado = true; };
+  }
+  const clave = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  function esqueletoJornadas() {
+    return h('div', { 'aria-hidden': 'true', style: 'display:grid;gap:16px' }, [1, 2, 3].map(() => h('div', { style: 'display:grid;grid-template-columns:64px 1fr;gap:24px;align-items:center' },
+      h('div', { class: 'hueso', style: 'height:64px' }), h('div', { style: 'display:grid;gap:8px' }, h('div', { class: 'hueso', style: 'height:20px;width:40%' }), h('div', { class: 'hueso', style: 'height:14px;width:25%' })))));
+  }
+
   // ---------- 4. Seguimiento ----------
   async function vistaSeguimiento(vista, q) {
     document.title = 'Seguimiento · Expediente Rosa';
@@ -707,6 +980,8 @@
     'estudio-avisado': 'Marcó a una paciente como avisada',
     interpretacion: 'Interpretó un papanicolaou',
     'estudio-interpretado': 'Interpretó un papanicolaou',
+    'jornada-programada': 'Programó una jornada',
+    'jornada-cancelada': 'Canceló una jornada',
   };
   async function vistaBitacora(vista) {
     document.title = 'Bitácora · Expediente Rosa';
@@ -728,7 +1003,7 @@
           h('tbody', {}, filas.map((f) => h('tr', {},
             h('td', { class: 'cuando' }, h('time', { datetime: f.cuando }, cuando(f.cuando))),
             h('td', { class: 'quien-fue' }, f.autor || f.dispositivo || h('span', { class: 'cero' }, 'Sin registro')),
-            h('td', {}, (QUE[f.tipo] || f.tipo), f.campos?.length ? h('span', { class: 'tenue' }, `: ${f.campos.join(', ')}`) : null),
+            h('td', {}, (QUE[f.tipo] || f.tipo), f.campos?.length ? h('span', { class: 'tenue' }, `: ${f.campos.join(', ')}`) : null, f.comunidad ? h('span', { class: 'tenue' }, ` en ${f.comunidad}`) : null),
             h('td', {}, f.pacienteId ? h('span', { class: 'mono tenue', title: f.pacienteId }, f.pacienteId.slice(0, 8).toLowerCase()) : h('span', { class: 'cero' }, '—'))))))),
         filas.length >= limite && limite < 500 ? h('div', { class: 'mas' }, h('button', { class: 'boton secundario chico', type: 'button', onclick: () => { limite = Math.min(limite * 4, 500); cargar(); } }, 'Ver más')) : null);
     }

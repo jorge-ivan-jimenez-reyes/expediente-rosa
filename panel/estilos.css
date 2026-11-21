@@ -372,6 +372,79 @@ tr.elegida .enlace-fila { color: var(--rosa); }
 .persona b { font-weight: 600; display: block; }
 .persona small { font-size: var(--t-nota); color: var(--tinta-2); }
 
+/* ---------- Jornadas ---------- */
+.boton.peligro { background: transparent; color: var(--rojo); border-color: var(--linea-fuerte); }
+.boton.peligro:hover:not(:disabled) { border-color: var(--rojo); background: color-mix(in srgb, var(--rojo) 10%, transparent); }
+
+.form-jornada-caja { margin-bottom: var(--e4); }
+.form-jornada { display: grid; gap: var(--e4); animation: abrir 220ms var(--curva); }
+@keyframes abrir { from { opacity: 0; transform: translateY(-6px); } }
+.campos-jornada { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(220px, 1.4fr) minmax(170px, 1fr); gap: var(--e4); align-items: start; }
+.campos-jornada .campo.ancho { grid-column: span 3; }
+.campos-jornada .campo:nth-child(4) { grid-column: span 2; }
+.campos-jornada .campo:nth-child(5) { grid-column: span 1; }
+.campos-jornada .campo select { min-width: 0; }
+.campo .pista { font-size: var(--t-nota); color: var(--tinta-2); min-height: 1.45em; }
+.campo input[type="date"] { padding-right: var(--e3); }
+
+.lista-jornadas { padding: var(--e2) var(--e5); }
+.jornadas { list-style: none; margin: 0; padding: 0; }
+.jornada {
+  display: grid; grid-template-columns: 72px minmax(0, 1fr) auto auto; gap: var(--e5); align-items: center;
+  padding: var(--e5) 0; border-bottom: 1px solid var(--linea); position: relative; outline: none;
+}
+.jornada:last-child { border-bottom: 0; }
+.jornada::before {
+  content: ""; position: absolute; inset: 4px calc(-1 * var(--e3)); border-radius: var(--radio-campo);
+  background: var(--rosa-suave); opacity: 0; pointer-events: none; z-index: 0;
+}
+.jornada > * { position: relative; z-index: 1; }
+.jornada:focus-visible::before { opacity: 1; }
+.jornada.nueva { animation: llegar 320ms var(--curva); }
+.jornada.nueva::before { animation: resaltar 1.8s var(--curva) forwards; }
+@keyframes llegar { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes resaltar { 0%, 35% { opacity: 1; } 100% { opacity: 0; } }
+
+.fecha-bloque {
+  display: grid; justify-items: center; align-content: center; gap: 0;
+  width: 72px; height: 80px; border-radius: 16px; border: 1px solid var(--linea-fuerte);
+  line-height: 1.1; text-transform: lowercase;
+}
+.fecha-bloque .semana, .fecha-bloque .mes { font-size: var(--t-nota); color: var(--tinta-2); font-weight: 500; }
+.fecha-bloque b { font-size: var(--t-cifra); font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.jornada.siguiente .fecha-bloque { background: var(--rosa-relleno); border-color: var(--rosa-relleno); color: #fff; }
+.jornada.siguiente .fecha-bloque .semana, .jornada.siguiente .fecha-bloque .mes { color: rgb(255 255 255 / 0.88); }
+
+.jornada .que { display: grid; gap: 2px; min-width: 0; }
+.jornada .linea-1 { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; }
+.jornada h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.012em; }
+.jornada .donde { color: var(--tinta-2); }
+.jornada .equipo, .jornada .nota-jornada { font-size: var(--t-nota); }
+.jornada .nota-jornada { color: var(--tinta-2); }
+.pildora.faltan { background: var(--campo); color: var(--tinta-2); }
+.jornada.siguiente .pildora.faltan { background: var(--rosa-suave); color: var(--rosa); }
+
+.conteos { display: flex; gap: var(--e6); margin: 0; }
+.conteos div { display: grid; gap: 2px; justify-items: end; text-align: right; }
+.conteos dt { font-size: var(--t-nota); color: var(--tinta-2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.conteos dd { margin: 0; font-size: var(--t-cifra); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.conteos .pendientes .icono { display: none; }
+.conteos .pendientes.hay .icono { display: block; }
+.conteos .pendientes:not(.hay) dd { color: var(--tinta-3); }
+
+.jornada > .accion { display: flex; align-items: center; justify-content: flex-end; min-width: 96px; position: static; }
+/* La confirmación tapa los conteos en vez de empujarlos: la fila no se mueve. */
+.jornada .confirmar {
+  position: absolute; z-index: 2; right: 0; top: 1px; bottom: 1px; min-width: 500px;
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--e2); white-space: nowrap;
+  padding-left: 64px;
+  background: linear-gradient(to right, transparent, var(--superficie) 56px);
+  animation: entrar-lado 160ms var(--curva);
+}
+@keyframes entrar-lado { from { opacity: 0; transform: translateX(8px); } }
+.jornada .pregunta { font-weight: 600; margin-right: var(--e1); }
+.jornada.nueva .pildora.faltan { background: var(--superficie); }
+
 /* ---------- Tablet ---------- */
 @media (max-width: 1080px) {
   .cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -389,6 +462,27 @@ tr.elegida .enlace-fila { color: var(--rosa); }
   .ficha { grid-template-columns: repeat(2, auto); }
   .panel { padding: var(--e4); }
   .tabla-caja { margin: 0 calc(-1 * var(--e4)); padding: 0 var(--e4); }
+  .campos-jornada { grid-template-columns: 1fr 1fr; }
+  .campos-jornada .campo.ancho, .campos-jornada .campo:nth-child(4), .campos-jornada .campo:nth-child(5) { grid-column: span 2; }
+  .lista-jornadas { padding: var(--e2) var(--e4); }
+  .jornada { grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--e3) var(--e4); }
+  .jornada .conteos { grid-column: 2 / 4; justify-content: flex-start; }
+  .conteos div { justify-items: start; text-align: left; }
+  .jornada > .accion { grid-column: 3; grid-row: 1; }
+  .fecha-bloque { width: 64px; height: 72px; }
+  .jornada .confirmar { position: static; min-width: 0; padding: 0; background: none; flex-wrap: wrap; white-space: normal; justify-content: flex-start; }
+}
+@media (max-width: 600px) {
+  .campos-jornada { grid-template-columns: 1fr; }
+  .campos-jornada .campo, .campos-jornada .campo.ancho, .campos-jornada .campo:nth-child(4), .campos-jornada .campo:nth-child(5) { grid-column: auto; }
+  .jornada { grid-template-columns: 56px minmax(0, 1fr); }
+  .fecha-bloque { width: 56px; height: 68px; }
+  .fecha-bloque b { font-size: 1.625rem; }
+  .jornada h2 { font-size: var(--t-seccion); }
+  .jornada .conteos { grid-column: 2; flex-wrap: wrap; gap: var(--e3) var(--e5); }
+  .conteos dt { white-space: normal; }
+  .conteos dd { font-size: 1.5rem; }
+  .jornada > .accion { grid-column: 2; grid-row: auto; justify-content: flex-start; margin-left: calc(-1 * var(--e3)); }
 }
 @media (max-width: 600px) {
   .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }

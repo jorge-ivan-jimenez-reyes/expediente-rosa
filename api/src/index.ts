@@ -117,6 +117,10 @@ const K = {
   // y a qué paciente pertenece cada estudio (hash estudioId → pacienteId).
   patologia: 'patologia:pendientes',
   estudioPaciente: 'estudios:paciente',
+  // Jornadas programadas: hash por id (UUID, no choca con `jornada:<comunidad>:<día>`)
+  // + sorted set por fecha (score = medianoche CDMX del día, epoch ms).
+  jornadaProgramada: (id: string) => `jornada:${id}`,
+  jornadas: 'jornadas',
 };
 
 export const DIAS_SEGUIMIENTO = 15;
@@ -662,6 +666,8 @@ app.get('/bitacora', async (c) => {
         ...(f.conflictoId ? { conflictoId: f.conflictoId } : {}),
         ...(f.campos ? { campos: f.campos.split(',') } : {}),
         ...(f.version ? { version: Number(f.version) } : {}),
+        ...(f.jornadaId ? { jornadaId: f.jornadaId } : {}),
+        ...(f.comunidad ? { comunidad: f.comunidad } : {}),
       };
       if (pacienteId && fila.pacienteId !== pacienteId && fila.otraPacienteId !== pacienteId) continue;
       out.push(fila);
@@ -931,6 +937,82 @@ app.get('/estadisticas', async (c) => c.json({
   seguimientoVencido: await valkey.zcount(K.seguimiento, '-inf', Date.now()),
   conflictosPendientes: await valkey.zcard(K.conflictos),
 }));
+
+// --- Jornadas programadas: coordinación dice a qué comunidad va la brigada y cuándo;
+// los teléfonos bajan antes de salir a las pacientes de esa comunidad.
+const DIA_RE = /^\d{4}-\d{2}-\d{2}$/;
+const diaValido = (s: string) => DIA_RE.test(s) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
+// Medianoche de la CDMX (UTC−6 todo el año desde 2022) del día AAAA-MM-DD, en epoch ms.
+const epochDia = (dia: string) => Date.parse(`${dia}T00:00:00-06:00`);
+const Dia = z.string().refine(diaValido, 'fecha AAAA-MM-DD inválida');
+
+const NuevaJornada = z.object({
+  comunidad: z.string().trim().min(1).max(80),
+  estado: z.string().trim().min(1).max(60),
+  municipio: z.string().trim().min(1).max(120).optional(),
+  fecha: Dia,
+  equipo: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+  nota: z.string().trim().max(300).optional(),
+  autor: z.string().trim().min(1).max(80),
+});
+
+type TJornada = { id: string; comunidad: string; estado: string; municipio: string | null; fecha: string; equipo: string[]; nota: string | null; autor: string | null; creada: string | null };
+function aJornada(h: Record<string, string>): TJornada {
+  let equipo: string[] = [];
+  try { equipo = JSON.parse(h.equipo ?? '[]'); } catch { /* vacío */ }
+  return { id: h.id, comunidad: h.comunidad, estado: h.estado, municipio: h.municipio || null, fecha: h.fecha, equipo, nota: h.nota || null, autor: h.autor || null, creada: h.creada || null };
+}
+
+app.post('/jornadas', async (c) => {
+  const body = NuevaJornada.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: body.error.issues }, 400);
+  const { comunidad, estado, municipio, fecha, equipo = [], nota, autor } = body.data;
+  const j: TJornada = { id: randomUUID(), comunidad, estado, municipio: municipio ?? null, fecha, equipo, nota: nota || null, autor, creada: new Date().toISOString() };
+  const campos: Record<string, string> = { id: j.id, comunidad, estado, fecha, equipo: JSON.stringify(equipo), autor, creada: j.creada! };
+  if (municipio) campos.municipio = municipio;
+  if (nota) campos.nota = nota;
+  await valkey.multi().hset(K.jornadaProgramada(j.id), campos).zadd(K.jornadas, epochDia(fecha), j.id).exec();
+  // Bitácora: quién programó y a dónde. Ni pacientes ni datos clínicos.
+  await bitacora({ tipo: 'jornada-programada', autor, jornadaId: j.id, comunidad });
+  return c.json(j, 201);
+});
+
+const ListaJornadas = z.object({ desde: Dia.optional(), dias: z.coerce.number().int().min(1).max(366).default(30) });
+app.get('/jornadas', async (c) => {
+  const q = ListaJornadas.safeParse(c.req.query());
+  if (!q.success) return c.json({ error: q.error.issues }, 400);
+  const inicio = epochDia(q.data.desde ?? hoy());
+  const ids = await valkey.zrangebyscore(K.jornadas, inicio, `(${inicio + q.data.dias * DIA_MS}`);
+  if (!ids.length) return c.json([]);
+  const p = valkey.pipeline();
+  for (const id of ids) p.hgetall(K.jornadaProgramada(id));
+  const jornadas = ((await p.exec()) ?? []).map(([, h]) => h as Record<string, string>).filter((h) => h?.id).map(aJornada);
+  // Por comunidad (sin acentos ni mayúsculas): pacientes no fusionadas y estudios
+  // en seguimiento o en laboratorio. Una sola lectura para todas las jornadas.
+  const quiero = new Set(jornadas.map((j) => clave(j.comunidad)));
+  const exps = await cargarExpedientes(await valkey.smembers(K.todas));
+  const enSeguimiento = new Set(await valkey.zrange(K.seguimiento, 0, -1));
+  const previas = new Map<string, number>(), pendientes = new Map<string, number>();
+  for (const x of exps) {
+    const k = clave(x.p.comunidad);
+    if (!quiero.has(k)) continue;
+    previas.set(k, (previas.get(k) ?? 0) + 1);
+    const n = x.estudios.filter((e) => e.etapa === 'en-laboratorio' || enSeguimiento.has(e.id)).length;
+    pendientes.set(k, (pendientes.get(k) ?? 0) + n);
+  }
+  return c.json(jornadas.map((j) => ({ ...j, pacientesPrevias: previas.get(clave(j.comunidad)) ?? 0, estudiosPendientes: pendientes.get(clave(j.comunidad)) ?? 0 })));
+});
+
+app.delete('/jornadas/:id', async (c) => {
+  const id = c.req.param('id');
+  const cuerpo = (await c.req.json().catch(() => ({}))) as { autor?: unknown } | null;
+  const autor = (c.req.query('autor') ?? (typeof cuerpo?.autor === 'string' ? cuerpo.autor : '')).trim() || 'coordinadora';
+  const comunidad = await valkey.hget(K.jornadaProgramada(id), 'comunidad');
+  const [[, quitado]] = (await valkey.multi().zrem(K.jornadas, id).del(K.jornadaProgramada(id)).exec()) as [[unknown, number], ...unknown[]];
+  if (!quitado && !comunidad) return c.json({ error: 'no existe' }, 404);
+  await bitacora({ tipo: 'jornada-cancelada', autor, jornadaId: id, comunidad: comunidad ?? undefined });
+  return c.json({ ok: true });
+});
 
 export async function cerrar() {
   await suscriptor?.quit();

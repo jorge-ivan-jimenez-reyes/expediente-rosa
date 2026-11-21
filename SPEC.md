@@ -129,3 +129,15 @@ Lo pidió EIRA: al volver una brigada quieren ver cuántas personas atendieron p
 | `GET /panel`, `GET /panel/*` | Panel web estático de la carpeta `panel/` (raíz del repo; `PANEL_DIR` lo cambia). `/panel` redirige a `/panel/` (`index.html`). En docker, `docker-compose.yml` monta `./panel:/panel` |
 
 `tipo` de la bitácora suma `interpretacion` y `avisado`. El seed manda una visita por paciente y día de estudios con `estado` (Jalisco, Oaxaca, Guerrero) y `jornada`, y deja 7 papanicolaous en laboratorio.
+
+### Jornadas programadas
+
+Coordinación programa en el panel a qué comunidad va la brigada y qué día; los teléfonos bajan solos a las pacientes de esa comunidad antes de salir. Solo se agregó; ningún contrato anterior cambió.
+
+| Método y ruta | Devuelve |
+|---|---|
+| `POST /jornadas` | Body `{ comunidad, estado, municipio?, fecha: 'AAAA-MM-DD', equipo?: string[] (≤20), nota?: string ≤300, autor }` → **201** `{ id, comunidad, estado, municipio, fecha, equipo, nota, autor, creada }` (`municipio` y `nota` en `null` si no vienen, `equipo` `[]`). Valkey: hash `jornada:<id>` (id = UUID, no choca con los contadores `jornada:<comunidad>:<día>`) + sorted set `jornadas` (score = medianoche CDMX de `fecha`, epoch ms). Bitácora `jornada-programada` con `autor`, `jornadaId` y `comunidad`, sin pacientes ni datos clínicos. 400 cuerpo inválido (fecha que no existe, como `2026-02-30`, también) |
+| `GET /jornadas?desde=AAAA-MM-DD&dias=N` | Por omisión desde hoy (CDMX) y 30 días (`dias` 1–366; el rango es `[desde, desde + dias)`). `[{ id, comunidad, estado, municipio, fecha, equipo, nota, autor, creada, pacientesPrevias, estudiosPendientes }]` por fecha. `pacientesPrevias` = pacientes sin `fusionadaEn` con esa comunidad; `estudiosPendientes` = estudios de esas pacientes en `seguimiento` o con `etapa: 'en-laboratorio'` (cada estudio cuenta una vez). La comunidad se compara sin mayúsculas ni acentos |
+| `DELETE /jornadas/:id` | `autor` en query (`?autor=`) o en el body (por omisión «coordinadora») → `{ ok }`; borra el hash y la saca de `jornadas`. Bitácora `jornada-cancelada` con `autor`, `jornadaId` y `comunidad`. 404 si no existe |
+
+`GET /bitacora` suma `jornadaId?` y `comunidad?` a cada fila, y `tipo` suma `jornada-programada` y `jornada-cancelada`. Panel: vista **Jornadas** (Coordinación) con la lista, «Programar jornada» y cancelar con confirmación.
