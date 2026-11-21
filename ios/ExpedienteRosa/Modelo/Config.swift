@@ -3,8 +3,14 @@ import Foundation
 enum Config {
     /// URL de la API. Se cambia en Info.plist (API_URL) o en Ajustes con la llave "api_url".
     static var apiURL: URL {
-        if let s = UserDefaults.standard.string(forKey: "api_url"), let u = URL(string: s) { return u }
-        let s = Bundle.main.object(forInfoDictionaryKey: "API_URL") as? String ?? "http://localhost:8787/api"
+        if let s = UserDefaults.standard.string(forKey: "api_url"), !s.isEmpty, let u = URL(string: s) { return u }
+        #if targetEnvironment(simulator)
+        let llave = "API_URL"               // el simulador llega a la Mac por localhost
+        #else
+        let llave = "API_URL_DISPOSITIVO"   // un iPhone/iPad real no: usa el servidor publicado
+        #endif
+        let s = Bundle.main.object(forInfoDictionaryKey: llave) as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "API_URL") as? String ?? "http://localhost:8787/api"
         return URL(string: s)!
     }
     /// Identificador del teléfono para la bitácora de sincronización.

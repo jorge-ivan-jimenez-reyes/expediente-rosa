@@ -26,6 +26,7 @@ targets:
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         API_URL: http://localhost:8787/api
+        API_URL_DISPOSITIVO: https://stuffed-nikon-losses-nevertheless.trycloudflare.com/api
         NSCameraUsageDescription: Para leer hojas de registro en papel de jornadas anteriores.
         NSMicrophoneUsageDescription: Para dictar el resultado de un estudio.
         NSSpeechRecognitionUsageDescription: Para convertir el dictado en texto dentro del teléfono.
