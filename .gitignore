@@ -9,3 +9,4 @@ ios/build
 DerivedData
 .DS_Store
 .pnpm-store
+asistente/.build

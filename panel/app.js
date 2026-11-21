@@ -142,6 +142,7 @@
     { id: 'jornadas', titulo: 'Jornadas' },
     { id: 'seguimiento', titulo: 'Seguimiento' },
     { id: 'bitacora', titulo: 'Bitácora' },
+    { id: 'asistente', titulo: 'Asistente' },
   ];
   const VISTAS_PATO = [{ id: 'patologia', titulo: 'Por interpretar' }];
   const vistasDe = (u) => (u?.rol === 'patologia' ? VISTAS_PATO : VISTAS_COORD);
@@ -162,14 +163,18 @@
     const vista = $('#vista');
     if (!usuario) { pintarBarra(null); return vistaEntrada(vista); }
     const permitidas = vistasDe(usuario).map((v) => v.id);
+    // Coordinación llega a Patología solo desde un folio del asistente, en solo lectura.
+    if (usuario.rol !== 'patologia') permitidas.push('patologia');
     if (!permitidas.includes(ruta)) return ir(permitidas[0]);
     pintarBarra(ruta);
     vista.replaceChildren();
     if (ruta === 'tablero') limpiar = await vistaTablero(vista, q) || limpiar;
     if (ruta === 'jornadas') limpiar = await vistaJornadas(vista) || limpiar;
-    if (ruta === 'patologia') limpiar = await vistaPatologia(vista) || limpiar;
+    if (ruta === 'patologia') limpiar = await vistaPatologia(vista, q) || limpiar;
     if (ruta === 'seguimiento') limpiar = await vistaSeguimiento(vista, q) || limpiar;
     if (ruta === 'bitacora') limpiar = await vistaBitacora(vista) || limpiar;
+    if (ruta === 'asistente') limpiar = await vistaAsistente(vista, q) || limpiar;
+    if (ruta === 'tablero' || ruta === 'bitacora') vista.append(botonPreguntar(q));
   }
 
   function pintarBarra(ruta) {
@@ -186,6 +191,9 @@
         h('span', { class: 'usuario' }, h('b', {}, usuario.nombre), rol),
         h('button', { class: 'boton quieto', type: 'button', onclick: () => { borrarUsuario(); usuario = null; ir(''); } }, 'Cambiar')),
     );
+    // En teléfono la navegación se desliza: deja visible la sección actual.
+    const actual = barra.querySelector('.nav [aria-current="page"]');
+    if (actual) actual.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   // Logo del cliente, aparte del logo propio.
   const cliente = () => h('div', { class: 'cliente' },
@@ -455,7 +463,8 @@
   // ---------- 3. Patología ----------
   const BETHESDA = ['Negativa', 'ASC-US', 'LSIL', 'HSIL', 'ASC-H', 'AGC', 'Carcinoma'];
 
-  async function vistaPatologia(vista) {
+  async function vistaPatologia(vista, q = {}) {
+    const soloLectura = usuario.rol !== 'patologia';
     document.title = 'Por interpretar · Expediente Rosa';
     let muestras = [], elegida = null, usandoEjemplo = false;
     const cuenta = h('p', {}, '');
@@ -476,7 +485,8 @@
       ejemplo.hidden = !r.ejemplo;
       muestras = (r.datos || []).slice().sort((a, b) => b.diasEsperando - a.diasEsperando);
       pintarLista();
-      elegir(muestras[0] || null, false);
+      const pedida = q.folio && muestras.find((m) => m.paciente.folio === q.folio);
+      elegir(pedida || muestras[0] || null, !!pedida);
     }
 
     function pintarLista() {
@@ -517,6 +527,7 @@
       if (enfocar) {
         if (matchMedia('(max-width: 900px)').matches) detalle.scrollIntoView({ behavior: reducido.matches ? 'auto' : 'smooth', block: 'start' });
         detalle.querySelector('input[name="bethesda"]')?.focus({ preventScroll: true });
+        if (soloLectura) ul.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
       }
     }
 
@@ -593,7 +604,7 @@
             h('div', {}, h('dt', {}, 'Comunidad'), h('dd', {}, p.comunidad)),
             m.estado ? h('div', {}, h('dt', {}, 'Estado'), h('dd', {}, m.estado)) : null)),
         h('hr', { class: 'separa' }),
-        form);
+        soloLectura ? h('p', { class: 'tenue' }, 'Solo Patología captura el resultado.') : form);
     }
 
     await cargar();
@@ -909,7 +920,7 @@
 
     const autor = `${usuario.nombre} (coordinación)`;
     const tbody = h('tbody', {}, filas.map((f) => {
-      const tr = h('tr', { 'data-id': f.estudioId });
+      const tr = h('tr', { 'data-id': f.estudioId, class: q.folio && f.paciente.folio === q.folio ? 'elegida' : null });
       const dias = Math.abs(f.diasRestantes);
       const boton = h('button', {
         class: 'boton secundario chico', type: 'button',
@@ -947,6 +958,7 @@
       h('caption', { class: 'solo-lector' }, 'Pacientes con resultado anormal sin avisar. Vencidas primero.'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Plazo'), h('th', { scope: 'col' }, 'Paciente'), h('th', { scope: 'col' }, 'Comunidad'), h('th', { scope: 'col' }, 'Estudio'), h('th', { scope: 'col' }, 'Motivo'), h('th', { scope: 'col' }, h('span', { class: 'solo-lector' }, 'Acción')))),
       tbody)));
+    tbody.querySelector('tr.elegida')?.scrollIntoView({ block: 'center', behavior: reducido.matches ? 'auto' : 'smooth' });
   }
   function vistaSeguimientoVacia(cuerpo) {
     cuerpo.replaceChildren(h('div', { class: 'vacio-vista' }, icono('normal'), h('b', {}, 'Todas avisadas'),
@@ -982,6 +994,7 @@
     'estudio-interpretado': 'Interpretó un papanicolaou',
     'jornada-programada': 'Programó una jornada',
     'jornada-cancelada': 'Canceló una jornada',
+    'consulta-asistente': 'Consultó al asistente',
   };
   async function vistaBitacora(vista) {
     document.title = 'Bitácora · Expediente Rosa';
@@ -1008,6 +1021,193 @@
         filas.length >= limite && limite < 500 ? h('div', { class: 'mas' }, h('button', { class: 'boton secundario chico', type: 'button', onclick: () => { limite = Math.min(limite * 4, 500); cargar(); } }, 'Ver más')) : null);
     }
     await cargar();
+  }
+
+  // ---------- 6. Asistente ----------
+  // Las cifras las calcula la API; el modelo de Apple, en la Mac donde corre la API, solo redacta.
+  const SUGERIDAS = [
+    '¿Cuántas mujeres de San Martín Peras tienen un BI-RADS 4 sin atender?',
+    'Resume la jornada de hoy',
+    '¿Qué pasó con Eulalia?',
+    '¿Qué papanicolaous llevan más tiempo esperando?',
+  ];
+  const turnos = []; // la conversación sigue ahí si cambias de vista y regresas
+  let modeloCaliente = false;
+
+  function botonPreguntar(q) {
+    return h('a', { class: 'boton principal flotante', href: '#/' + conQuery('asistente', { comunidad: q.comunidad }) },
+      s('svg', { viewBox: '0 0 16 16', class: 'icono', 'aria-hidden': 'true' },
+        s('path', { d: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linejoin': 'round' })),
+      'Preguntar');
+  }
+
+  async function vistaAsistente(vista, q) {
+    document.title = 'Asistente · Expediente Rosa';
+    let cerrado = false;
+    const comunidad = q.comunidad || '';
+    const sel = h('select', { 'aria-label': 'Comunidad', onchange: (ev) => ir('asistente', { comunidad: ev.target.value }) }, h('option', { value: '' }, 'Todas'));
+    const llenarSel = () => {
+      const nombres = new Set(comunidadesConocidas.map((c) => c.comunidad));
+      if (comunidad) nombres.add(comunidad);
+      sel.replaceChildren(h('option', { value: '' }, 'Todas'), ...[...nombres].sort((a, b) => a.localeCompare(b, 'es')).map((c) => h('option', { value: c, selected: c === comunidad }, c)));
+    };
+    llenarSel();
+    if (!comunidadesConocidas.length) pedir('/api/resumen').then((r) => {
+      if (cerrado || !r.ok) return;
+      for (const c of r.datos?.porComunidad || []) if (c.estado !== 'Sin estado' && !comunidadesConocidas.some((x) => x.comunidad === c.comunidad)) comunidadesConocidas.push({ comunidad: c.comunidad, estado: c.estado });
+      llenarSel();
+    });
+
+    const campo = h('input', { id: 'pregunta', name: 'pregunta', autocomplete: 'off', maxlength: '500', required: true, placeholder: 'Escribe una pregunta' });
+    const boton = h('button', { class: 'boton principal', type: 'submit' }, 'Preguntar');
+    const lista = h('ol', { class: 'turnos', 'aria-label': 'Respuestas, la más nueva primero', 'aria-live': 'polite' });
+    const form = h('form', {
+      class: 'preguntar', role: 'search',
+      onsubmit: (ev) => { ev.preventDefault(); enviar(campo.value); },
+    },
+      h('label', { class: 'solo-lector', for: 'pregunta' }, 'Pregunta'),
+      h('div', { class: 'fila-pregunta' }, campo, boton),
+      h('div', { class: 'chips', role: 'group', 'aria-label': 'Preguntas sugeridas' },
+        SUGERIDAS.map((t) => h('button', { class: 'chip', type: 'button', onclick: () => { campo.value = t; enviar(t); } }, t))));
+
+    vista.append(
+      h('div', { class: 'encabezado' },
+        h('div', {}, h('h1', {}, 'Asistente'), h('p', { class: 'meta' }, 'Las cifras salen de la base. El modelo de Apple las redacta en esta Mac, sin nube.')),
+        h('div', { class: 'derecha' }, h('label', { class: 'campo' }, h('span', {}, 'Comunidad'), sel))),
+      h('section', { class: 'panel asistente' }, form),
+      lista);
+
+    function enviar(texto) {
+      const pregunta = texto.trim();
+      if (!pregunta) { campo.focus(); return; }
+      if (turnos.some((t) => t.estado === 'pensando')) return; // una a la vez: el modelo responde en fila
+      const t = { pregunta, comunidad, estado: 'pensando', inicio: Date.now(), r: null, el: null };
+      turnos.unshift(t);
+      campo.value = '';
+      pintarLista();
+      preguntarTurno(t);
+    }
+    alCambiar = actualizarBoton;
+
+    function actualizarBoton() {
+      const ocupado = turnos.some((t) => t.estado === 'pensando');
+      boton.disabled = ocupado;
+      boton.textContent = ocupado ? 'Pensando…' : 'Preguntar';
+      form.querySelectorAll('.chip').forEach((c) => { c.disabled = ocupado; });
+    }
+
+    function pintarLista() {
+      lista.replaceChildren(...turnos.map((t) => { t.el = h('li', { class: 'turno' }); pintarTurno(t); return t.el; }));
+      actualizarBoton();
+    }
+
+    // Reloj de la espera: solo mientras hay una respuesta en camino y la vista está abierta.
+    const reloj = setInterval(() => { for (const t of turnos) if (t.estado === 'pensando') pintarTurno(t); }, 1000);
+
+    pintarLista();
+    if (!turnos.length) campo.focus();
+    return () => { cerrado = true; clearInterval(reloj); alCambiar = () => {}; };
+  }
+
+  // La vista abierta avisa aquí cuándo cambia el estado (para el botón y los chips).
+  let alCambiar = () => {};
+  async function preguntarTurno(t) {
+    t.estado = 'pensando'; t.inicio = Date.now();
+    pintarTurno(t); alCambiar();
+    const r = await pedir('/api/asistente', { metodo: 'POST', cuerpo: { pregunta: t.pregunta, comunidad: t.comunidad || undefined, autor: `${usuario.nombre} (coordinación)` } });
+    if (r.ok && r.datos?.respuesta) { t.estado = 'listo'; t.r = r.datos; if (r.datos.motor === 'apple') modeloCaliente = true; }
+    else {
+      t.estado = 'error';
+      t.error = r.ejemplo ? 'Esta API todavía no tiene el asistente. Reiníciala con el código nuevo.' : `No se pudo responder (${r.status}). Intenta otra vez.`;
+    }
+    pintarTurno(t); alCambiar();
+  }
+
+  function pintarTurno(t) {
+    if (!t.el) return;
+    const preguntaEl = h('p', { class: 'turno-pregunta' }, t.pregunta, t.comunidad ? h('span', { class: 'tenue' }, ` · ${t.comunidad}`) : null);
+    let tarjeta;
+    if (t.estado === 'pensando') {
+      const s = Math.floor((Date.now() - t.inicio) / 1000);
+      tarjeta = h('div', { class: 'respuesta pensando', role: 'status' },
+        h('div', { class: 'pensando-linea' }, h('span', { class: 'puntos', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('b', {}, 'Pensando en esta Mac…'), h('span', { class: 'tenue num' }, `${s} s`)),
+        !modeloCaliente && s >= 5 ? h('p', { class: 'nota' }, 'La primera respuesta tarda hasta 30 s mientras el modelo carga. Las siguientes, unos segundos.') : null);
+    } else if (t.estado === 'error') {
+      tarjeta = h('div', { class: 'respuesta' }, h('p', { class: 'error' }, t.error),
+        h('button', { class: 'boton secundario chico', type: 'button', onclick: () => reintentar(t) }, 'Reintentar'));
+    } else {
+      const r = t.r;
+      const apple = r.motor === 'apple';
+      tarjeta = h('div', { class: 'respuesta' },
+        h('p', { class: 'respuesta-texto' }, conFolios(r.respuesta, r.datosUsados?.folios || {})),
+        h('div', { class: 'respuesta-pie' },
+          h('span', { class: 'sello ' + (apple ? 'apple' : 'cifras'), title: apple ? 'Redactado por Foundation Models en la Mac donde corre la API. Las cifras las calculó la API.' : (r.motivo ? `Sin modelo: ${r.motivo}` : 'Sin modelo') },
+            h('span', { class: 'punto' }), apple ? 'Modelo de Apple · en esta Mac · sin nube' : 'Sin modelo: cifras directas'),
+          !apple && r.motivo ? h('span', { class: 'nota' }, r.motivo[0].toUpperCase() + r.motivo.slice(1)) : null,
+          r.ms ? h('span', { class: 'nota num' }, `${(r.ms / 1000).toLocaleString('es-MX', { maximumFractionDigits: 1 })} s`) : null),
+        datosUsados(r.datosUsados));
+    }
+    t.el.replaceChildren(preguntaEl, tarjeta);
+  }
+
+  function reintentar(t) {
+    if (turnos.some((x) => x.estado === 'pensando')) return; // una a la vez
+    preguntarTurno(t);
+  }
+
+  // Folios clicables: llevan a Seguimiento o a Patología con la fila elegida.
+  function conFolios(texto, folios) {
+    const llaves = Object.keys(folios).sort((a, b) => b.length - a.length).map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (!llaves.length) return texto;
+    const partes = texto.split(new RegExp(`\\b(${llaves.join('|')})\\b`, 'g'));
+    return partes.map((x, i) => {
+      if (i % 2 === 0) return x;
+      const destino = folios[x];
+      if (!destino) return h('span', { class: 'mono folio' }, x);
+      return h('a', { class: 'mono folio', href: '#/' + conQuery(destino, { folio: x }), title: destino === 'patologia' ? 'Ver en Patología' : 'Ver en Seguimiento' }, x);
+    });
+  }
+
+  const ETIQUETA_INTENCION = { seguimiento: 'Seguimiento', patologia: 'Patología pendiente', hoy: 'Movimientos de hoy', paciente: 'Paciente', jornadas: 'Jornadas', general: 'Resumen' };
+  function datosUsados(d) {
+    if (!d) return null;
+    const MAX = 10;
+    const tabla = (titulo, cabezas, filas, celdas) => filas.length ? h('div', { class: 'du-bloque' },
+      h('h3', {}, titulo, h('span', { class: 'tenue' }, ` · ${n(filas.length)}`)),
+      h('div', { class: 'tabla-caja' }, h('table', {},
+        h('thead', {}, h('tr', {}, cabezas.map((c) => h('th', { scope: 'col', class: c.n ? 'n' : null }, c.t || c)))),
+        h('tbody', {}, filas.slice(0, MAX).map((f) => h('tr', {}, celdas(f).map((c, i) => h('td', { class: cabezas[i].n ? 'n' : null }, c))))))),
+      filas.length > MAX ? h('p', { class: 'nota' }, `y ${n(filas.length - MAX)} más`) : null) : null;
+    const plazo = (dias) => (dias < 0 ? `Vencido hace ${plural(-dias, 'día', 'días')}` : dias === 0 ? 'Vence hoy' : `Quedan ${plural(dias, 'día', 'días')}`);
+    const filtros = [d.filtros?.comunidad, d.filtros?.estado, d.filtros?.clasificacion, d.filtros?.tipo && TIPO_ESTUDIO[d.filtros.tipo], d.filtros?.soloVencidos && 'solo vencidos'].filter(Boolean);
+    const r = d.resumen || {};
+    const bloques = {
+      seguimiento: () => tabla('Seguimiento sin atender', ['Folio', 'Estudio', 'Clasificación', 'Plazo', 'Comunidad'], d.seguimiento || [],
+        (f) => [h('span', { class: 'mono' }, f.folio), TIPO_ESTUDIO[f.tipo] || f.tipo, f.clasificacion || f.motivo, plazo(f.diasRestantes), f.comunidad]),
+      patologia: () => tabla('Papanicolaous esperando', ['Folio', { t: 'Días esperando', n: true }, 'Comunidad'], d.patologia || [],
+        (f) => [h('span', { class: 'mono' }, f.folio), n(f.diasEsperando), f.comunidad]),
+      jornadas: () => tabla('Jornadas programadas', ['Fecha', 'Comunidad', { t: 'Pacientes', n: true }, { t: 'Pendientes', n: true }], d.jornadas || [],
+        (j) => [fechaCorta(j.fecha), `${j.comunidad} · ${j.estado}`, n(j.pacientesPrevias), n(j.estudiosPendientes)]),
+      hoy: () => tabla('Bitácora', ['Cuándo', 'Qué', 'Quién', 'Folio'], d.bitacora || [],
+        (b) => [cuando(b.cuando), QUE[b.tipo] || b.tipo, b.autor, b.folio ? h('span', { class: 'mono' }, b.folio) : '—']),
+      paciente: () => (d.pacientes || []).map((p) => h('div', { class: 'du-bloque' },
+        h('h3', {}, `${p.nombre} `, h('span', { class: 'mono tenue' }, p.folio), h('span', { class: 'tenue' }, ` · ${p.comunidad}`)),
+        tabla('Estudios', ['Fecha', 'Estudio', 'Resultado', 'Clasificación'], p.estudios || [],
+          (e) => [fechaCorta(e.fecha), TIPO_ESTUDIO[e.tipo] || e.tipo, e.etapa === 'en-laboratorio' ? 'En laboratorio' : e.resultado, e.clasificacion || '—']),
+        tabla('Visitas', ['Fecha', 'Comunidad', 'Jornada'], p.visitas || [], (v) => [fechaCorta(v.fecha), v.comunidad, v.jornada || '—']))),
+    };
+    const orden = { seguimiento: ['seguimiento'], patologia: ['patologia'], hoy: ['hoy', 'patologia'], paciente: ['paciente'], jornadas: ['jornadas'], general: ['seguimiento', 'patologia', 'jornadas'] }[d.intencion] || [];
+    const resto = ['seguimiento', 'patologia', 'jornadas', 'hoy'].filter((k) => !orden.includes(k));
+    return h('details', { class: 'datos-usados' },
+      h('summary', {}, h('b', {}, 'Datos usados'), h('span', { class: 'tenue' }, ` · ${ETIQUETA_INTENCION[d.intencion] || d.intencion}${filtros.length ? ' · ' + filtros.join(', ') : ''}`)),
+      h('div', { class: 'du-cuerpo' },
+        d.calculada ? h('div', { class: 'du-bloque' }, h('h3', {}, 'Cifras calculadas por la API'), h('p', { class: 'du-calculada' }, d.calculada)) : null,
+        h('dl', { class: 'du-resumen' },
+          [['Personas', r.personas], ['Estudios', r.estudios], ['Anormales', r.anormales], ['Esperan patólogo', r.pendientesPatologia], ['En seguimiento', r.enSeguimiento], ['Vencidos', r.seguimientoVencido]]
+            .map(([k, v]) => h('div', {}, h('dt', {}, k), h('dd', {}, n(v))))),
+        orden.flatMap((k) => bloques[k]()),
+        h('details', { class: 'du-mas' }, h('summary', {}, 'Todo lo demás que recibió el modelo'), resto.flatMap((k) => bloques[k]())),
+        h('p', { class: 'nota' }, `${n(d.caracteres)} caracteres de contexto. Nada sale de este servidor.`)));
   }
 
   // ---------- Arranque ----------

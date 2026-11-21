@@ -140,4 +140,20 @@ Coordinación programa en el panel a qué comunidad va la brigada y qué día; l
 | `GET /jornadas?desde=AAAA-MM-DD&dias=N` | Por omisión desde hoy (CDMX) y 30 días (`dias` 1–366; el rango es `[desde, desde + dias)`). `[{ id, comunidad, estado, municipio, fecha, equipo, nota, autor, creada, pacientesPrevias, estudiosPendientes }]` por fecha. `pacientesPrevias` = pacientes sin `fusionadaEn` con esa comunidad; `estudiosPendientes` = estudios de esas pacientes en `seguimiento` o con `etapa: 'en-laboratorio'` (cada estudio cuenta una vez). La comunidad se compara sin mayúsculas ni acentos |
 | `DELETE /jornadas/:id` | `autor` en query (`?autor=`) o en el body (por omisión «coordinadora») → `{ ok }`; borra el hash y la saca de `jornadas`. Bitácora `jornada-cancelada` con `autor`, `jornadaId` y `comunidad`. 404 si no existe |
 
-`GET /bitacora` suma `jornadaId?` y `comunidad?` a cada fila, y `tipo` suma `jornada-programada` y `jornada-cancelada`. Panel: vista **Jornadas** (Coordinación) con la lista, «Programar jornada» y cancelar con confirmación.
+`GET /bitacora` suma `jornadaId?` y `comunidad?` a cada fila, y `tipo` suma `jornada-programada`, `jornada-cancelada` y `consulta-asistente`. Panel: vista **Jornadas** (Coordinación) con la lista, «Programar jornada» y cancelar con confirmación.
+
+### Asistente de coordinación
+
+Coordinación pregunta en español en el panel y recibe 1 a 3 frases con cifras y folios. Regla: **las cifras las calcula la API; el modelo solo redacta.** El modelo es el de Apple (Foundation Models) y corre en la misma Mac que la API, con el binario `asistente/`; nada sale a la nube.
+
+| Método y ruta | Devuelve |
+|---|---|
+| `POST /asistente` | Body `{ pregunta: string 1–500, comunidad?: string, autor?: string }` → `{ respuesta, motor: 'apple' \| 'sin-modelo', motivo?, ms, datosUsados }`. 400 si falta la pregunta |
+
+- `api/src/asistente.ts` lee la pregunta con reglas (comunidad, estado, tipo de estudio, BI-RADS o Bethesda, «vencid», nombre o folio de una paciente) y elige una intención: `seguimiento`, `patologia`, `hoy`, `paciente`, `jornadas` o `general`. Con eso calcula una **respuesta calculada** y arma el contexto (< 6 000 caracteres): resumen filtrado, seguimiento sin atender (folio, estudio, clasificación, días vencido o restantes, comunidad), papanicolaous esperando (folio, días), jornadas programadas a 30 días, las últimas 40 entradas de bitácora (sin `consulta-asistente`) y, si la pregunta nombra a una paciente que existe, su línea de tiempo (visitas, estudios con tipo, fecha, resultado, clasificación y etapa, seguimiento y bitácora). La respuesta calculada va al final del contexto.
+- El binario (`ASISTENTE_BIN`, por omisión `asistente/.build/release/asistente` en la raíz del repo) recibe `{pregunta, contexto}` por stdin y devuelve `{respuesta}`. Timeout 45 s, una llamada a la vez. Al arrancar, la API lo precalienta con `{calentar: true}` si existe.
+- La API revisa lo que redactó el modelo: si trae un folio o un número que no está en el contexto, o copia un renglón de tabla, se descarta y sale la respuesta calculada con `motor: 'sin-modelo'` y `motivo`. Sin binario, sin Apple Intelligence (código 3), guardrail (4) o tiempo agotado: lo mismo.
+- `datosUsados`: `{ intencion, filtros, calculada, resumen, seguimiento[], patologia[], jornadas[], bitacora[], pacientes[], folios{folio: 'seguimiento' \| 'patologia' \| null}, caracteres }`. `folios` dice a qué vista del panel lleva cada folio.
+- Bitácora `consulta-asistente` con `autor`, **sin la pregunta ni la respuesta**. `ASISTENTE_BITACORA=0` la apaga (para probar contra la base de la demo).
+- Panel: vista **Asistente** (Coordinación) y botón «Preguntar» en Tablero y Bitácora. Los folios de la respuesta abren Seguimiento (`#/seguimiento?folio=`) o Patología en solo lectura (`#/patologia?folio=`).
+

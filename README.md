@@ -98,6 +98,26 @@ cd ios && xcodebuild test -scheme ExpedienteRosa -destination 'platform=iOS Simu
 
 Todo funciona. Alta, búsqueda con coincidencias, historial, sincronización, duplicados, conflictos y lectura de hojas corren sin el modelo. Cuando Foundation Models está disponible agrega una línea que explica por qué dos fichas parecen la misma persona y un resumen de tres líneas del historial. La lectura de hojas usa Vision y reglas fijas para los formatos de EIRA: «Escanear» llena los datos de la paciente y «Leer hoja», en el expediente, llena el estudio de hoy (tipo, BI-RADS o Bethesda, referencia y notas). Con el modelo, «Escanear» también saca los estudios previos y lee hojas con otro formato. Lo que no está escrito en el papel no se llena, y quien captura revisa antes de guardar.
 
+## Asistente de coordinación
+
+En el panel, Coordinación pregunta en español («¿Cuántas mujeres de San Martín Peras tienen un BI-RADS 4 sin atender?», «Resume la jornada de hoy», «¿Qué pasó con Eulalia?») y recibe una respuesta corta con cifras y folios. Los folios llevan a Seguimiento o a Patología, y «Datos usados» muestra la tabla de lo que se le pasó al modelo.
+
+Las cuentas las hace la API. El modelo de Apple (Foundation Models), que corre en la misma Mac que la API, solo redacta la respuesta ya calculada; si escribe un folio o un número que no venía en los datos, la API lo descarta y muestra las cifras directas. Ningún dato sale a la nube.
+
+Para compilarlo hace falta una Mac con macOS 26 o posterior y Apple Intelligence encendido:
+
+```bash
+cd asistente && swift build -c release
+# binario: asistente/.build/release/asistente (la API lo busca ahí; otra ruta: ASISTENTE_BIN)
+echo '{"pregunta":"¿Cuántas hay?","contexto":"RESPUESTA CALCULADA: 2 pacientes."}' | .build/release/asistente
+```
+
+Reinicia la API después de compilar: al arrancar precalienta el modelo. La primera respuesta en frío puede tardar 20 a 30 s; las siguientes, de 2 a 8 s.
+
+Sin Apple Intelligence (Linux, Docker o una Mac sin el modelo) el asistente igual responde: la API devuelve la redacción fija con las mismas cifras y el panel lo marca «Sin modelo: cifras directas».
+
+Para desplegarlo hay dos caminos. El primero es una Mac en la oficina de coordinación con la API, Valkey y el binario; el panel se abre desde la red de la oficina. El segundo deja la API en la nube y el asistente en la Mac de coordinación: esa Mac corre su propia API apuntando al mismo Valkey (`VALKEY_URL`) y es la única que llama al modelo. En los dos casos los datos de salud solo se leen en una máquina de EIRA.
+
 ## Credenciales
 
 Ninguna. No hay llaves de terceros porque la IA corre en el teléfono. Las variables de la API están en `.env.example` y los valores por defecto sirven para correrlo en local: `VALKEY_URL` (`redis://localhost:6379`) y `PORT` (`8787`).
@@ -142,13 +162,15 @@ Todo va bajo `/api`. El detalle de cada respuesta está en [`SPEC.md`](SPEC.md#e
 | `GET /resumen?estado=&comunidad=` | Personas, estudios y anormales por estado y comunidad |
 | `GET /jornada/:comunidad` · `GET /jornada/:comunidad/en-vivo` | Conteo del día; en vivo por Server-Sent Events |
 | `GET /bitacora` · `GET /estadisticas` · `GET /salud` | Bitácora, totales y estado de la API |
+| `POST /asistente` | Pregunta en español; cifras de la API redactadas por el modelo de Apple en la Mac |
 
 Valkey guarda cada paciente en un hash con versión, los estudios en listas y las visitas en un sorted set por fecha. Las llaves de envío van con `SET NX` y caducan en 30 días, y así un reenvío no duplica. Hay sets por apellido fonético y por apellido más año para comparar solo contra candidatas probables, y un índice vectorial de valkey-search sobre trigramas fonéticos del nombre. Duplicados, seguimiento, conflictos y muestras por interpretar van en sorted sets; la bitácora en un stream, y el conteo en vivo de la jornada en un canal pub/sub por comunidad. La lógica de coincidencias está en `api/src/coincidencias.ts` y su puerto en `ios/ExpedienteRosa/Coincidencias/`; las dos dan el mismo resultado con los casos de `api/test/coincidencias.test.ts`.
 
 ## Estructura
 
 ```
-api/src/                 API Hono: rutas, coincidencias, búsqueda, cifrado
+api/src/                 API Hono: rutas, coincidencias, búsqueda, cifrado, asistente
+asistente/               binario Swift con Foundation Models que redacta las respuestas del asistente
 api/scripts/seed.ts      carga de datos ficticios por POST /api/sync
 api/test/                pruebas (vitest)
 ios/project.yml          proyecto XcodeGen
