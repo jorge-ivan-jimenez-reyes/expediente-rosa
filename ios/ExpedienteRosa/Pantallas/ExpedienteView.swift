@@ -278,6 +278,8 @@ struct AgregarEstudioView: View {
                         Menu("Ejemplo") {
                             Button("Hoja de hoy: Eulalia") { leerEjemplo("eulalia-hoy-p2") }
                             Button("Hoja de 2025: Eulalia") { leerEjemplo("eulalia-p2") }
+                            Button("Revisión mamaria: Rosa María") { leerEjemplo("eira-mamaria-2") }
+                            Button("Citología: Rosa María") { leerEjemplo("eira-citologia") }
                         }
                         if leyendo { ProgressView().padding(.leading, 8) }
                     }

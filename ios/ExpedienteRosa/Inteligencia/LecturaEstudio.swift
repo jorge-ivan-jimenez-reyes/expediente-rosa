@@ -23,11 +23,15 @@ enum LecturaEstudio {
         if let b = RevisionHoja.primerGrupo(#/bi-?rads\s*(\d)(?!\s*\.\s*[a-z]*\s*(?:estudio|est\b))/#, en: t), let n = Int(b), (0...5).contains(n) {
             r.clasificacion = "BI-RADS \(n)"
         } else if t.contains("papanicol") || t.contains("citolog") || t.contains("bethesda") {
-            r.clasificacion = bethesda(t).map { "Bethesda: \($0)" }
+            // El formato de citología imprime toda la lista Bethesda: ahí no se adivina, lo captura el médico.
+            let traeLeyenda = t.contains("categoria del diagnostico") || t.contains("otro hallazgo")
+            r.clasificacion = traeLeyenda ? nil : bethesda(t).map { "Bethesda: \($0)" }
         }
 
         // Tipo: el formato de revisión mamaria es de mama; en un dictado, la primera palabra de estudio que aparezca.
-        if t.contains("revision mamaria") || t.contains("evaluacion diagnostica") || t.contains("conducta a seguir") {
+        if t.contains("citologia cervical") || t.contains("reporte de citologia") {
+            r.tipo = .papanicolaou
+        } else if t.contains("revision mamaria") || t.contains("evaluacion diagnostica") || t.contains("conducta a seguir") {
             r.tipo = .mastografia
         } else {
             let claves: [(String, TipoEstudio)] = [("mastograf", .mastografia), ("mamograf", .mastografia), ("ultrason", .ultrasonido),
