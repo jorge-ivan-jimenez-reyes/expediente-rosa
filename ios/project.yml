@@ -25,6 +25,7 @@ targets:
           UIColorName: FondoArranque
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         API_URL: http://localhost:8787/api
         API_URL_DISPOSITIVO: https://stuffed-nikon-losses-nevertheless.trycloudflare.com/api
         NSCameraUsageDescription: Para leer hojas de registro en papel de jornadas anteriores.

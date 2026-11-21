@@ -58,14 +58,14 @@ struct Pestanas: View {
     var body: some View {
         TabView(selection: $pestana) {
             Tab("Buscar", systemImage: "magnifyingglass", value: "buscar") {
-                BuscarView(irAJornada: { pestana = "jornada" })
+                BuscarView(irAJornada: { pestana = "jornada" }).anchoLegible()
             }
             Tab("Jornada", systemImage: "antenna.radiowaves.left.and.right", value: "jornada") {
-                JornadaView()
+                JornadaView().anchoLegible()
             }
             .badge(sync.pendientes)
             Tab("Revisión", systemImage: "person.2.badge.gearshape", value: "revision") {
-                RevisionView()
+                RevisionView().anchoLegible()
             }
         }
         .tint(Tema.rosa)
@@ -118,4 +118,14 @@ extension Rol {
 #Preview {
     ContentView()
         .modelContainer(for: Esquema.modelos, inMemory: true)
+}
+
+extension View {
+    /// En iPad (sobre todo acostado) el contenido no se estira a todo lo ancho: columna centrada de
+    /// lectura cómoda, con el mismo fondo a los lados. En iPhone no cambia nada.
+    func anchoLegible(_ maximo: CGFloat = 760) -> some View {
+        frame(maxWidth: maximo)
+            .frame(maxWidth: .infinity)
+            .background(Tema.fondo.ignoresSafeArea())
+    }
 }
