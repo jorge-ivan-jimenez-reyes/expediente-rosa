@@ -36,11 +36,12 @@
 
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+  & {
     --rosa: #FF5FA8;
     --rosa-relleno: #D61F7E;
     --rosa-relleno-hover: #E63D8F;
@@ -351,7 +352,7 @@ tr.elegida .enlace-fila { color: var(--rosa); }
 .aviso .icono { margin-top: 2px; }
 .aviso.anormal .icono { color: #FF8A8A; }
 .aviso.normal .icono { color: #4CD787; }
-@media (prefers-color-scheme: dark) {
+:root[data-tema="oscuro"] {
   .aviso { background: #2C2C2E; color: var(--tinta); border: 1px solid var(--linea-fuerte); }
 }
 .aviso p { font-size: var(--t-cuerpo); line-height: 1.4; }
