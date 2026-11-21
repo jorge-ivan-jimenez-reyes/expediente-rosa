@@ -1004,7 +1004,7 @@
             h('td', { class: 'cuando' }, h('time', { datetime: f.cuando }, cuando(f.cuando))),
             h('td', { class: 'quien-fue' }, f.autor || f.dispositivo || h('span', { class: 'cero' }, 'Sin registro')),
             h('td', {}, (QUE[f.tipo] || f.tipo), f.campos?.length ? h('span', { class: 'tenue' }, `: ${f.campos.join(', ')}`) : null, f.comunidad ? h('span', { class: 'tenue' }, ` en ${f.comunidad}`) : null),
-            h('td', {}, f.pacienteId ? h('span', { class: 'mono tenue', title: f.pacienteId }, f.pacienteId.slice(0, 8).toLowerCase()) : h('span', { class: 'cero' }, '—'))))))),
+            h('td', {}, f.pacienteId ? h('span', { class: 'mono tenue', title: f.pacienteId }, f.folio || f.pacienteId.slice(0, 8).toLowerCase()) : h('span', { class: 'cero' }, '—'))))))),
         filas.length >= limite && limite < 500 ? h('div', { class: 'mas' }, h('button', { class: 'boton secundario chico', type: 'button', onclick: () => { limite = Math.min(limite * 4, 500); cargar(); } }, 'Ver más')) : null);
     }
     await cargar();

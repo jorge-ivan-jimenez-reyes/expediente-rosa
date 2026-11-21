@@ -78,7 +78,7 @@ final class Sincronizador {
 
     /// Repositorio que avisa al Sincronizador en cada escritura (para que `pendientes` se mueva solo).
     var repositorio: Repositorio {
-        Repositorio(contexto: contexto, autor: autor, alCambiar: { [weak self] in self?.actualizarPendientes() })
+        Repositorio(contexto: contexto, autor: Config.autor, alCambiar: { [weak self] in self?.actualizarPendientes() })
     }
 
     func actualizarPendientes() {

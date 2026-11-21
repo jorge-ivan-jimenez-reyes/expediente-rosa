@@ -670,6 +670,7 @@ app.get('/bitacora', async (c) => {
         ...(f.comunidad ? { comunidad: f.comunidad } : {}),
       };
       if (pacienteId && fila.pacienteId !== pacienteId && fila.otraPacienteId !== pacienteId) continue;
+      if (fila.pacienteId) (fila as Record<string, unknown>).folio = (await valkey.hget(K.paciente(fila.pacienteId), 'folio')) ?? null;
       out.push(fila);
       if (out.length >= limite) break;
     }

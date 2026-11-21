@@ -226,10 +226,13 @@ struct JornadaView: View {
 /// Control de acceso explicado en una tarjeta. Tocar un rol lo elige (igual que el selector de arriba).
 struct QuienVeQue: View {
     @AppStorage("rol") private var rol: Rol = .enfermeria
+    @AppStorage("nombre") private var nombre = ""
 
     var body: some View {
         Tarjeta(espacio: Tema.Espacio.xs) {
             Text("Quién ve qué").font(.seccion).padding(.bottom, Tema.Espacio.xs)
+            CampoTexto(titulo: "Tu nombre (va en la bitácora)", texto: $nombre)
+                .padding(.bottom, Tema.Espacio.s)
             ForEach(Rol.allCases) { r in
                 Button {
                     withAnimation(Tema.resorte) { rol = r }

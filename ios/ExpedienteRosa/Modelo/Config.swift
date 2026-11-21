@@ -14,4 +14,12 @@ enum Config {
         UserDefaults.standard.set(d, forKey: "dispositivo")
         return d
     }
+
+    /// Quién captura, para la bitácora: «Rocío (Enfermería)». Sin nombre: «Enfermería · a1b2».
+    static var autor: String {
+        let d = UserDefaults.standard
+        let rol = Rol(rawValue: d.string(forKey: "rol") ?? "") ?? .enfermeria
+        let nombre = (d.string(forKey: "nombre") ?? "").trimmingCharacters(in: .whitespaces)
+        return nombre.isEmpty ? "\(rol.nombre) · \(dispositivo.suffix(4))" : "\(nombre) (\(rol.nombre))"
+    }
 }
