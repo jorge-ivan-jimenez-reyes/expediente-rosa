@@ -7,7 +7,7 @@
    - El médico ve el historial (resultados, BI-RADS, conducta) y registra los estudios de hoy. La mastografía o el ultrasonido pueden quedar con resultado; el papanicolaou queda «En laboratorio».
    - Todo se guarda en el teléfono como pendiente. Si dos enfermeras registran a la misma señora en dos teléfonos, no pasa nada todavía.
 3. **Al volver la señal.** «Sincronizar». Cada registro tiene llave única: si la conexión se corta y se repite, no se duplica. El servidor cruza contra toda la base y manda los posibles duplicados y los cambios encontrados a Revisión.
-4. **Coordinación (panel web, en la computadora).** Tablero: personas únicas, estudios, anormales y pendientes por estado y comunidad. Revisa duplicados (une o separa, nunca el sistema solo), conflictos y bitácora.
+4. **Coordinación.** En el panel web: tablero con personas únicas, estudios, anormales y pendientes por estado y comunidad, seguimiento y bitácora. En la app (pestaña Revisión, rol Coordinación): duplicados (une o separa, nunca el sistema solo) y conflictos.
 5. **Patología (panel web).** El patólogo entra con su nombre, ve las muestras por interpretar (la que más espera primero), captura el resultado Bethesda. Si es anormal, entra solo a la lista de seguimiento con fecha límite.
 6. **Seguimiento.** Coordinación ve las anormales vencidas primero, avisa a la paciente y la marca como avisada. Cada paso queda en la bitácora, sin datos clínicos.
 7. **Siguiente jornada.** Cuando la brigada vuelve a esa comunidad, «Bajar pacientes» trae el historial actualizado, incluido el resultado del patólogo.

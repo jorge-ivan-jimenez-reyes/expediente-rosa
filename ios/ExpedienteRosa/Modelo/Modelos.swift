@@ -11,7 +11,7 @@ enum Rol: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .enfermeria: "Enfermería"
         case .medico: "Médico"
-        case .coordinadora: "Coordinadora"
+        case .coordinadora: "Coordinación"
         }
     }
 }

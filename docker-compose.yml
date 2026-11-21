@@ -11,6 +11,7 @@ services:
     environment:
       VALKEY_URL: redis://valkey:6379
       PORT: "8787"
+      CLAVE_DATOS: ${CLAVE_DATOS:-}
     ports: ["8787:8787"]
     volumes: [./api:/api, /api/node_modules, ./panel:/panel:ro]
     depends_on: [valkey]
