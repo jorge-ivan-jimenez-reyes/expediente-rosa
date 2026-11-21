@@ -84,5 +84,29 @@ Todos bajo `/api`. Los nuevos (Carril C) solo agregan; los contratos de `sync`, 
 | `GET /buscar?nombre=&apellidoPaterno=&apellidoMaterno=&edad=&nacimiento=&comunidad=&k=10` | `{ motor: 'valkey-search' \| 'bloques', resultados: [{ paciente, puntaje, razones, posible, distancia? }] }`. Con `valkey-bundle` usa KNN de valkey-search (`docker-compose.bundle.yml`); si no, los sets de bloque |
 | `GET /estadisticas` | `{ pacientes, duplicadosPendientes, eventos, seguimientoPendiente, seguimientoVencido }` |
 | `GET /salud` | `{ ok, valkey, cifrado }` |
+| `GET /conflictos` | (Reto 1) Actualizaciones que no se aplicaron, más viejas primero: `[{ id, pacienteId, autor, dispositivo, creado, motivo: 'version-distinta' \| 'paciente-no-existe', versionBase, versionActual, campos: [{ campo, propuesto, actual, alRecibir }], paciente{id, folio, nombre, apellidoPaterno, apellidoMaterno, comunidad} }]`. Valkey: hash `conflicto:<id>` + sorted set `conflictos` (score = fecha) |
+| `POST /conflictos/:id/resolver` | (Reto 1) Body `{ decision: 'aceptar' \| 'rechazar', autor? }` → `{ ok, version? }`. Aceptar aplica lo propuesto encima de lo actual y sube `version`; 404 si ya no está pendiente; 409 si la paciente no existe |
+| `GET /bitacora?limite=50&pacienteId=` | (Reto 1) Stream `eventos` con XREVRANGE, más nuevo primero (limite 1–500): `[{ id, cuando, tipo, autor, dispositivo, pacienteId, otraPacienteId?, estudioId?, visitaId?, conflictoId?, campos?, version? }]`. `tipo`: alta, estudio, visita, actualizacion, conflicto, conflicto-aceptar, conflicto-rechazar, duplicado-unir, duplicado-separar, seguimiento-atendido. Sin datos clínicos: ni resultados, ni clasificación, ni notas, ni valores de campos (solo sus nombres) |
 
 Cifrado en reposo: `consentimiento` y `nota` van con AES-256-GCM si hay `CLAVE_DATOS` (32 bytes base64); sin ella se guardan en claro y la API lo avisa en el log.
+
+### Reto 1 (definición oficial de EIRA): campos y eventos nuevos
+
+Todo es opcional y se agregó sin cambiar los contratos anteriores.
+
+- `Paciente`: `entidadNacimiento?`, `idEira?` (texto). El servidor agrega `version` (entero, 1 en el alta; las pacientes viejas cuentan como 1).
+- `Estudio`: `visitaId?`, `clasificacion?` (texto, p. ej. «BI-RADS 4», «Bethesda: LSIL»), `conducta?`: `rutina-1-anio` \| `mastografia-tamizaje` \| `imagen-complementaria` \| `evaluacion-6-meses` \| `referencia`.
+- `GET /pacientes` y `GET /pacientes/:id` devuelven también `visitas[]` (ordenadas por fecha). Valkey: hash `visita:<id>` + sorted set `paciente:<id>:visitas` (score = fecha). Unir mueve también las visitas.
+- `POST /sync` responde además `conflictos: [{ pacienteId, campos[] }]`.
+- `GET /seguimiento` agrega `motivo` a cada fila. Regla: resultado `anormal`, BI-RADS 4 o 5, Bethesda anormal (ASC-US, ASC-H, LSIL, HSIL, AGC, carcinoma) o conducta `referencia` → 15 días; BI-RADS 3 o conducta `evaluacion-6-meses` → 6 meses.
+- `GET /estadisticas` agrega `conflictosPendientes`. `POST /duplicados/resolver` y `POST /seguimiento/:id/atendido` aceptan `autor?` para la bitácora.
+- Coincidencias: si las dos pacientes traen `entidadNacimiento` y es distinta, el par igual entra a la cola de duplicados, con 0.1 menos de puntaje y la razón «distinta entidad de nacimiento». **Es un ajuste solo del servidor** (`ajusteEntidad` en `api/src/index.ts`); `coincidencias.ts` y su gemelo Swift no cambiaron.
+
+Eventos nuevos de `POST /sync`:
+
+```json
+{"tipo":"visita","llave":"<uuid>","visita":{"id":"<uuid>","pacienteId":"<uuid>","fecha":"2026-11-21T10:05:00-06:00","comunidad":"Tuxpan","motivo":"jornada de tamizaje","registradaPor":"enfermeria-1"}}
+{"tipo":"actualizacion","llave":"<uuid>","actualizacion":{"pacienteId":"<uuid>","campos":{"edad":51,"idEira":"EIRA-1"},"versionBase":1,"autor":"enfermeria-1"}}
+```
+
+`campos` acepta solo: `nombre`, `apellidoPaterno`, `apellidoMaterno`, `nacimiento`, `edad`, `comunidad`, `municipio`, `entidadNacimiento`, `idEira` (no se puede borrar un campo, solo cambiarlo). Si `versionBase` es la versión actual, se aplican solo esos campos, `version` sube 1 y se mueven los índices (bloques, comunidad, vector). Si no, no se toca nada: queda en `/conflictos` para la coordinadora. La comparación y el cambio corren en un script Lua, así que dos envíos al mismo tiempo no se pisan.

@@ -4,7 +4,8 @@ import { streamSSE } from 'hono/streaming';
 import { serve } from '@hono/node-server';
 import Valkey from 'iovalkey';
 import { z } from 'zod';
-import { comparar, llavesBloque, UMBRAL_POSIBLE, type DatosPaciente } from './coincidencias';
+import { randomUUID } from 'node:crypto';
+import { comparar, llavesBloque, normalizar, UMBRAL_POSIBLE, type DatosPaciente } from './coincidencias';
 import { cifrar, descifrar, cifradoActivo } from './cifrado';
 import { guardarVector, hayModuloSearch, crearIndice, knn, llaveVector } from './busqueda';
 
@@ -25,6 +26,9 @@ const Paciente = z.object({
   consentimiento: z.string(), // fecha ISO en que la paciente aceptó
   creadaPor: z.string(),
   creada: z.string(),
+  // Reto 1 (formato oficial de EIRA): opcionales.
+  entidadNacimiento: z.string().min(1).optional(),
+  idEira: z.string().min(1).optional(),
 });
 const Estudio = z.object({
   id: z.string(),
@@ -34,14 +38,43 @@ const Estudio = z.object({
   resultado: z.enum(['pendiente', 'normal', 'anormal']).default('pendiente'),
   nota: z.string().max(500).optional(),
   registradoPor: z.string(),
+  // Reto 1: opcionales. clasificacion es texto libre («BI-RADS 4», «Bethesda: LSIL»).
+  visitaId: z.string().optional(),
+  clasificacion: z.string().max(100).optional(),
+  conducta: z.enum(['rutina-1-anio', 'mastografia-tamizaje', 'imagen-complementaria', 'evaluacion-6-meses', 'referencia']).optional(),
+});
+const fechaISO = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'fecha ISO inválida');
+const Visita = z.object({
+  id: z.string().min(1),
+  pacienteId: z.string(),
+  fecha: fechaISO,
+  comunidad: z.string().min(1),
+  motivo: z.string().max(200).optional(),
+  registradaPor: z.string(),
+});
+// Campos de la paciente que se pueden corregir después del alta (no id, folio ni consentimiento).
+const CamposEditables = Paciente.pick({
+  nombre: true, apellidoPaterno: true, apellidoMaterno: true, nacimiento: true, edad: true,
+  comunidad: true, municipio: true, entidadNacimiento: true, idEira: true,
+}).partial().refine((o) => Object.values(o).some((v) => v !== undefined), 'campos vacío');
+const Actualizacion = z.object({
+  pacienteId: z.string(),
+  campos: CamposEditables,
+  versionBase: z.number().int().min(1),
+  autor: z.string(),
 });
 const Evento = z.discriminatedUnion('tipo', [
   z.object({ llave: z.string(), tipo: z.literal('alta'), paciente: Paciente }),
   z.object({ llave: z.string(), tipo: z.literal('estudio'), estudio: Estudio }),
+  z.object({ llave: z.string(), tipo: z.literal('visita'), visita: Visita }),
+  z.object({ llave: z.string(), tipo: z.literal('actualizacion'), actualizacion: Actualizacion }),
 ]);
 const Sync = z.object({ dispositivo: z.string(), eventos: z.array(Evento).max(500) });
 type TPaciente = z.infer<typeof Paciente>;
 type TEstudio = z.infer<typeof Estudio>;
+type TVisita = z.infer<typeof Visita>;
+type TActualizacion = z.infer<typeof Actualizacion>;
+type TCampos = z.infer<typeof CamposEditables>;
 
 // --- Llaves de Valkey (un solo lugar) ---------------------------------------
 const norm = (c: string) => c.toLowerCase().trim();
@@ -62,10 +95,16 @@ const K = {
   // C2: contadores del día por comunidad (hash) y canal pub/sub del tablero.
   jornada: (c: string, dia: string) => `jornada:${norm(c)}:${dia}`,
   canal: (c: string) => `canal:jornada:${norm(c)}`,
+  // Reto 1: visitas (hash por id + sorted set por paciente, score = fecha) y conflictos.
+  visita: (id: string) => `visita:${id}`,
+  visitas: (pacienteId: string) => `paciente:${pacienteId}:visitas`,
+  conflicto: (id: string) => `conflicto:${id}`,
+  conflictos: 'conflictos',
 };
 
 export const DIAS_SEGUIMIENTO = 15;
 const DIA_MS = 24 * 60 * 60 * 1000;
+const chunk2 = (xs: string[]) => Array.from({ length: xs.length / 2 }, (_, i) => [xs[2 * i], xs[2 * i + 1]] as const);
 // Las jornadas son en México: el «día» se corta a medianoche de la CDMX.
 const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
 
@@ -74,7 +113,8 @@ async function leerPaciente(id: string): Promise<TPaciente | null> {
   const h = await valkey.hgetall(K.paciente(id));
   if (!h.id) return null;
   if (h.consentimiento) h.consentimiento = descifrar(h.consentimiento);
-  return { ...h, edad: h.edad ? Number(h.edad) : undefined } as unknown as TPaciente;
+  // version: las pacientes dadas de alta antes del Reto 1 no la tienen; cuentan como 1.
+  return { ...h, edad: h.edad ? Number(h.edad) : undefined, version: Number(h.version ?? 1) } as unknown as TPaciente & { version: number };
 }
 
 const serializarEstudio = (e: TEstudio) => JSON.stringify(e.nota ? { ...e, nota: cifrar(e.nota) } : e);
@@ -83,6 +123,22 @@ function leerEstudio(s: string): TEstudio {
   return e.nota ? { ...e, nota: descifrar(e.nota) } : e;
 }
 const leerEstudios = async (id: string) => (await valkey.lrange(K.estudios(id), 0, -1)).map(leerEstudio);
+
+async function leerVisitas(pacienteId: string): Promise<TVisita[]> {
+  const ids = await valkey.zrange(K.visitas(pacienteId), 0, -1);
+  if (!ids.length) return [];
+  const p = valkey.pipeline();
+  for (const id of ids) p.hgetall(K.visita(id));
+  const filas = (await p.exec()) ?? [];
+  return filas.map(([, h]) => h as Record<string, string>).filter((h) => h?.id) as unknown as TVisita[];
+}
+
+// --- Bitácora (stream `eventos`) -------------------------------------------
+// Solo quién, qué, cuándo y de quién: nunca resultados, clasificaciones ni notas.
+async function bitacora(campos: Record<string, string | number | undefined>) {
+  const plano = Object.entries(campos).filter(([, v]) => v !== undefined && v !== '').flatMap(([k, v]) => [k, String(v)]);
+  await valkey.xadd(K.eventos, 'MAXLEN', '~', '10000', '*', ...plano);
+}
 
 // --- Tablero en vivo (C2): contar y avisar por pub/sub ----------------------
 async function avisarJornada(comunidad: string, evento: Record<string, unknown>, incrementos: Record<string, number>) {
@@ -125,11 +181,29 @@ async function escuchar(canal: string, fn: (msg: string) => void) {
 }
 
 // --- Seguimiento de anormales (C1) ------------------------------------------
-async function registrarSeguimiento(e: TEstudio) {
-  const base = Date.parse(e.fecha);
-  const limite = (Number.isNaN(base) ? Date.now() : base) + DIAS_SEGUIMIENTO * DIA_MS;
+// Reto 1, formato de EIRA: cuándo un estudio entra a seguimiento y con qué plazo.
+//   resultado anormal, BI-RADS 4/5, Bethesda anormal o conducta «referencia» → 15 días
+//   BI-RADS 3 o conducta «evaluacion-6-meses» → 6 meses
+export function reglaSeguimiento(e: Pick<TEstudio, 'resultado' | 'clasificacion' | 'conducta'>): { plazo: '15-dias' | '6-meses'; motivo: string } | null {
+  const c = e.clasificacion ?? '';
+  const birads = c.match(/bi-?rads\s*:?\s*([0-6])/i)?.[1];
+  const bethesdaAnormal = /bethesda/i.test(c) && /\b(asc-?us|asc-?h|lsil|hsil|agc|carcinoma)\b/i.test(c);
+  if (birads === '4' || birads === '5') return { plazo: '15-dias', motivo: `BI-RADS ${birads}` };
+  if (e.resultado === 'anormal') return { plazo: '15-dias', motivo: 'resultado anormal' };
+  if (bethesdaAnormal) return { plazo: '15-dias', motivo: 'Bethesda anormal' };
+  if (e.conducta === 'referencia') return { plazo: '15-dias', motivo: 'referencia' };
+  if (birads === '3') return { plazo: '6-meses', motivo: 'BI-RADS 3' };
+  if (e.conducta === 'evaluacion-6-meses') return { plazo: '6-meses', motivo: 'evaluación a 6 meses' };
+  return null;
+}
+
+async function registrarSeguimiento(e: TEstudio, regla = reglaSeguimiento(e) ?? { plazo: '15-dias' as const, motivo: 'resultado anormal' }) {
+  const parsed = Date.parse(e.fecha);
+  const base = Number.isNaN(parsed) ? Date.now() : parsed;
+  let limite = base + DIAS_SEGUIMIENTO * DIA_MS;
+  if (regla.plazo === '6-meses') { const d = new Date(base); d.setUTCMonth(d.getUTCMonth() + 6); limite = d.getTime(); }
   await valkey.multi()
-    .hset(K.segEstudio(e.id), { estudioId: e.id, pacienteId: e.pacienteId, tipo: e.tipo, fecha: e.fecha })
+    .hset(K.segEstudio(e.id), { estudioId: e.id, pacienteId: e.pacienteId, tipo: e.tipo, fecha: e.fecha, motivo: regla.motivo })
     .zadd(K.seguimiento, limite, e.id)
     .exec();
 }
@@ -145,14 +219,23 @@ async function buscarCandidatas(p: TPaciente) {
     const otra = await leerPaciente(id);
     if (!otra || (otra as Record<string, unknown>).fusionadaEn) continue;
     const r = comparar(p as DatosPaciente, otra as DatosPaciente);
-    if (r.puntaje >= UMBRAL_POSIBLE) out.push({ id, ...r });
+    if (r.puntaje >= UMBRAL_POSIBLE) out.push({ id, ...ajusteEntidad(p, otra, r) });
   }
   return out.sort((a, b) => b.puntaje - a.puntaje);
+}
+
+// Ajuste SOLO del servidor (coincidencias.ts y su gemelo Swift no cambian): si las dos
+// traen entidad de nacimiento y es distinta, el par igual entra a la cola para que la
+// coordinadora decida, pero con 0.1 menos y la razón a la vista.
+export function ajusteEntidad(a: { entidadNacimiento?: string }, b: { entidadNacimiento?: string }, r: { puntaje: number; razones: string[] }) {
+  if (!a.entidadNacimiento || !b.entidadNacimiento || normalizar(a.entidadNacimiento) === normalizar(b.entidadNacimiento)) return r;
+  return { puntaje: Math.max(0, r.puntaje - 0.1), razones: [...r.razones, 'distinta entidad de nacimiento'] };
 }
 
 async function aplicarAlta(p: TPaciente) {
   const campos = Object.fromEntries(Object.entries(p).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]));
   campos.consentimiento = cifrar(campos.consentimiento);
+  campos.version = '1';
   const m = valkey.multi()
     .hset(K.paciente(p.id), campos)
     .sadd(K.todas, p.id)
@@ -173,13 +256,78 @@ async function aplicarAlta(p: TPaciente) {
 
 async function aplicarEstudio(e: TEstudio) {
   await valkey.rpush(K.estudios(e.pacienteId), serializarEstudio(e));
-  if (e.resultado === 'anormal') await registrarSeguimiento(e);
+  const regla = reglaSeguimiento(e);
+  if (regla) await registrarSeguimiento(e, regla);
   const p = await leerPaciente(e.pacienteId);
   if (p) {
     await avisarJornada(p.comunidad,
       { tipo: 'estudio', pacienteId: e.pacienteId, estudio: e.tipo, resultado: e.resultado },
       { estudios: 1, [`tipo:${e.tipo}`]: 1, ...(e.resultado === 'anormal' ? { anormales: 1 } : {}) });
   }
+}
+
+// --- Visitas (Reto 1): la visita es el día que vino; los estudios cuelgan de ella ---
+async function aplicarVisita(v: TVisita) {
+  const campos = Object.fromEntries(Object.entries(v).filter(([, x]) => x != null).map(([k, x]) => [k, String(x)]));
+  await valkey.multi()
+    .hset(K.visita(v.id), campos)
+    .zadd(K.visitas(v.pacienteId), Date.parse(v.fecha), v.id)
+    .exec();
+}
+
+// --- Actualizaciones con versión (Reto 1) -----------------------------------
+// Compara y aplica en Valkey de un golpe: si alguien más ya cambió a la paciente
+// (versionBase ≠ version actual) no se toca nada.
+const SCRIPT_VERSION = `
+if redis.call('EXISTS', KEYS[1]) == 0 then return {-1, 0} end
+local v = tonumber(redis.call('HGET', KEYS[1], 'version') or '1')
+if v ~= tonumber(ARGV[1]) then return {0, v} end
+if #ARGV > 1 then redis.call('HSET', KEYS[1], unpack(ARGV, 2)) end
+redis.call('HSET', KEYS[1], 'version', v + 1)
+return {1, v + 1}`;
+
+const aTexto = (campos: TCampos) => Object.entries(campos).filter(([, v]) => v !== undefined).flatMap(([k, v]) => [k, String(v)]);
+
+// Después de cambiar nombre, edad o comunidad hay que mover los índices.
+async function reindexar(antes: TPaciente, despues: TPaciente) {
+  const m = valkey.multi();
+  for (const b of llavesBloque(antes)) m.srem(K.bloque(b), antes.id);
+  for (const b of llavesBloque(despues)) m.sadd(K.bloque(b), despues.id);
+  if (norm(antes.comunidad) !== norm(despues.comunidad)) m.srem(K.comunidad(antes.comunidad), antes.id).sadd(K.comunidad(despues.comunidad), despues.id);
+  guardarVector(m, despues.id, despues);
+  await m.exec();
+}
+
+async function forzarCampos(pacienteId: string, campos: TCampos) {
+  const antes = await leerPaciente(pacienteId);
+  if (!antes) return null;
+  await valkey.multi().hset(K.paciente(pacienteId), ...aTexto(campos)).hincrby(K.paciente(pacienteId), 'version', 1).exec();
+  const despues = (await leerPaciente(pacienteId))!;
+  await reindexar(antes, despues);
+  return despues as TPaciente & { version: number };
+}
+
+type ResultadoActualizacion = { aplicada: true; version: number } | { aplicada: false; conflictoId: string; campos: string[] };
+async function aplicarActualizacion(a: TActualizacion, dispositivo: string): Promise<ResultadoActualizacion> {
+  const antes = await leerPaciente(a.pacienteId);
+  const r = (await valkey.eval(SCRIPT_VERSION, 1, K.paciente(a.pacienteId), String(a.versionBase), ...aTexto(a.campos))) as [number, number];
+  const nombres = Object.keys(a.campos).filter((k) => (a.campos as Record<string, unknown>)[k] !== undefined);
+  if (r[0] === 1) {
+    await reindexar(antes!, (await leerPaciente(a.pacienteId))!);
+    return { aplicada: true, version: r[1] };
+  }
+  // Conflicto: se guarda lo actual y lo propuesto; decide la coordinadora.
+  const id = randomUUID();
+  const actual = antes ? Object.fromEntries(nombres.map((k) => [k, (antes as Record<string, unknown>)[k] ?? null])) : null;
+  await valkey.multi()
+    .hset(K.conflicto(id), {
+      id, pacienteId: a.pacienteId, autor: a.autor, dispositivo, versionBase: String(a.versionBase),
+      versionActual: String(r[1]), motivo: r[0] === -1 ? 'paciente-no-existe' : 'version-distinta',
+      propuesto: JSON.stringify(a.campos), actual: JSON.stringify(actual), creado: new Date().toISOString(),
+    })
+    .zadd(K.conflictos, Date.now(), id)
+    .exec();
+  return { aplicada: false, conflictoId: id, campos: nombres };
 }
 
 // --- Rutas ------------------------------------------------------------------
@@ -195,18 +343,33 @@ app.post('/sync', async (c) => {
   if (!body.success) return c.json({ error: body.error.issues }, 400);
   let aplicados = 0, repetidos = 0;
   const posiblesDuplicados: { pacienteId: string; con: string; puntaje: number; razones: string[] }[] = [];
+  const conflictos: { pacienteId: string; campos: string[] }[] = [];
+  const dispositivo = body.data.dispositivo;
   for (const ev of body.data.eventos) {
-    const nuevo = await valkey.set(K.envio(ev.llave), body.data.dispositivo, 'EX', 60 * 60 * 24 * 30, 'NX');
+    const nuevo = await valkey.set(K.envio(ev.llave), dispositivo, 'EX', 60 * 60 * 24 * 30, 'NX');
     if (!nuevo) { repetidos++; continue; }
+    const base = { dispositivo, llave: ev.llave };
     if (ev.tipo === 'alta') {
       for (const d of await aplicarAlta(ev.paciente)) posiblesDuplicados.push({ pacienteId: ev.paciente.id, con: d.id, puntaje: d.puntaje, razones: d.razones });
-    } else {
+      await bitacora({ ...base, tipo: 'alta', pacienteId: ev.paciente.id, autor: ev.paciente.creadaPor });
+    } else if (ev.tipo === 'estudio') {
       await aplicarEstudio(ev.estudio);
+      await bitacora({ ...base, tipo: 'estudio', pacienteId: ev.estudio.pacienteId, autor: ev.estudio.registradoPor, estudioId: ev.estudio.id, visitaId: ev.estudio.visitaId });
+    } else if (ev.tipo === 'visita') {
+      await aplicarVisita(ev.visita);
+      await bitacora({ ...base, tipo: 'visita', pacienteId: ev.visita.pacienteId, autor: ev.visita.registradaPor, visitaId: ev.visita.id });
+    } else {
+      const a = ev.actualizacion;
+      const r = await aplicarActualizacion(a, dispositivo);
+      if (r.aplicada) await bitacora({ ...base, tipo: 'actualizacion', pacienteId: a.pacienteId, autor: a.autor, campos: Object.keys(a.campos).join(','), version: r.version });
+      else {
+        conflictos.push({ pacienteId: a.pacienteId, campos: r.campos });
+        await bitacora({ ...base, tipo: 'conflicto', pacienteId: a.pacienteId, autor: a.autor, campos: r.campos.join(','), conflictoId: r.conflictoId });
+      }
     }
-    await valkey.xadd(K.eventos, 'MAXLEN', '~', '10000', '*', 'tipo', ev.tipo, 'dispositivo', body.data.dispositivo, 'llave', ev.llave);
     aplicados++;
   }
-  return c.json({ aplicados, repetidos, posiblesDuplicados });
+  return c.json({ aplicados, repetidos, posiblesDuplicados, conflictos });
 });
 
 // Antes de salir a la jornada: el teléfono baja las pacientes de esa comunidad
@@ -218,7 +381,7 @@ app.get('/pacientes', async (c) => {
   for (const id of ids) {
     const p = await leerPaciente(id);
     if (!p || (p as Record<string, unknown>).fusionadaEn) continue;
-    pacientes.push({ ...p, estudios: await leerEstudios(id) });
+    pacientes.push({ ...p, estudios: await leerEstudios(id), visitas: await leerVisitas(id) });
   }
   return c.json(pacientes);
 });
@@ -226,7 +389,7 @@ app.get('/pacientes', async (c) => {
 app.get('/pacientes/:id', async (c) => {
   const p = await leerPaciente(c.req.param('id'));
   if (!p) return c.json({ error: 'no existe' }, 404);
-  return c.json({ ...p, estudios: await leerEstudios(p.id) });
+  return c.json({ ...p, estudios: await leerEstudios(p.id), visitas: await leerVisitas(p.id) });
 });
 
 // Cola de revisión para la coordinadora: ella decide, nunca el sistema solo.
@@ -240,11 +403,11 @@ app.get('/duplicados', async (c) => {
   return c.json(out);
 });
 
-const Resolver = z.object({ a: z.string(), b: z.string(), decision: z.enum(['unir', 'separar']) });
+const Resolver = z.object({ a: z.string(), b: z.string(), decision: z.enum(['unir', 'separar']), autor: z.string().optional() });
 app.post('/duplicados/resolver', async (c) => {
   const body = Resolver.safeParse(await c.req.json());
   if (!body.success) return c.json({ error: body.error.issues }, 400);
-  const { a, b, decision } = body.data;
+  const { a, b, decision, autor } = body.data;
   if (decision === 'unir') {
     // b se une en a: sus estudios pasan a a y b queda marcada, no se borra.
     // La nota viaja cifrada tal cual: no hace falta descifrar para moverla.
@@ -255,13 +418,17 @@ app.post('/duplicados/resolver', async (c) => {
       m.rpush(K.estudios(a), JSON.stringify({ ...e, pacienteId: a }));
       if (await valkey.zscore(K.seguimiento, e.id)) m.hset(K.segEstudio(e.id), 'pacienteId', a);
     }
-    m.del(K.estudios(b)).del(llaveVector(b)).hset(K.paciente(b), 'fusionadaEn', a);
+    // Las visitas de b también pasan a a.
+    for (const [vid, score] of chunk2(await valkey.zrange(K.visitas(b), 0, -1, 'WITHSCORES'))) {
+      m.zadd(K.visitas(a), score, vid).hset(K.visita(vid), 'pacienteId', a);
+    }
+    m.del(K.estudios(b)).del(K.visitas(b)).del(llaveVector(b)).hset(K.paciente(b), 'fusionadaEn', a);
     await m.exec();
   } else {
     await valkey.multi().sadd(K.distintas(a), b).sadd(K.distintas(b), a).exec();
   }
   await valkey.multi().zrem(K.duplicados, K.par(a, b)).del(K.par(a, b)).exec();
-  await valkey.xadd(K.eventos, '*', 'tipo', `duplicado-${decision}`, 'a', a, 'b', b);
+  await bitacora({ tipo: `duplicado-${decision}`, pacienteId: a, otraPacienteId: b, autor: autor ?? 'coordinadora' });
   return c.json({ ok: true });
 });
 
@@ -278,7 +445,7 @@ app.get('/seguimiento', async (c) => {
     if (!p) continue;
     if (comunidad && norm(p.comunidad) !== norm(comunidad)) continue;
     out.push({
-      estudioId, tipo: info.tipo, fecha: info.fecha,
+      estudioId, tipo: info.tipo, fecha: info.fecha, motivo: info.motivo ?? 'resultado anormal',
       fechaLimite: new Date(limite).toISOString(),
       vencido: limite < ahora,
       diasRestantes: Math.ceil((limite - ahora) / DIA_MS),
@@ -290,10 +457,12 @@ app.get('/seguimiento', async (c) => {
 
 app.post('/seguimiento/:estudioId/atendido', async (c) => {
   const id = c.req.param('estudioId');
+  const cuerpo = (await c.req.json().catch(() => ({}))) as { autor?: unknown };
+  const pacienteId = await valkey.hget(K.segEstudio(id), 'pacienteId');
   const quitado = await valkey.zrem(K.seguimiento, id);
   if (!quitado) return c.json({ error: 'no está en seguimiento' }, 404);
   await valkey.del(K.segEstudio(id));
-  await valkey.xadd(K.eventos, '*', 'tipo', 'seguimiento-atendido', 'estudio', id);
+  await bitacora({ tipo: 'seguimiento-atendido', pacienteId: pacienteId ?? undefined, estudioId: id, autor: typeof cuerpo.autor === 'string' ? cuerpo.autor : 'medico' });
   return c.json({ ok: true });
 });
 
@@ -376,12 +545,98 @@ export async function preparar() {
   return obtenerMotor();
 }
 
+// --- Conflictos (Reto 1): la coordinadora decide qué versión queda ----------
+async function leerConflicto(id: string) {
+  const h = await valkey.hgetall(K.conflicto(id));
+  if (!h.id) return null;
+  const propuesto = JSON.parse(h.propuesto) as Record<string, unknown>;
+  const alRecibir = JSON.parse(h.actual) as Record<string, unknown> | null;
+  const p = await leerPaciente(h.pacienteId) as (TPaciente & { version: number }) | null;
+  return {
+    id: h.id, pacienteId: h.pacienteId, autor: h.autor, dispositivo: h.dispositivo, creado: h.creado, motivo: h.motivo,
+    versionBase: Number(h.versionBase), versionActual: p?.version ?? null,
+    // actual = lo que la paciente tiene hoy; alRecibir = lo que tenía cuando llegó el cambio.
+    campos: Object.keys(propuesto).map((campo) => ({
+      campo, propuesto: propuesto[campo],
+      actual: p ? (p as Record<string, unknown>)[campo] ?? null : null,
+      alRecibir: alRecibir ? alRecibir[campo] ?? null : null,
+    })),
+    paciente: p ? { id: p.id, folio: p.folio, nombre: p.nombre, apellidoPaterno: p.apellidoPaterno, apellidoMaterno: p.apellidoMaterno, comunidad: p.comunidad } : null,
+  };
+}
+
+app.get('/conflictos', async (c) => {
+  const out = [];
+  for (const id of await valkey.zrange(K.conflictos, 0, 100)) {
+    const cf = await leerConflicto(id);
+    if (cf) out.push(cf);
+  }
+  return c.json(out);
+});
+
+const ResolverConflicto = z.object({ decision: z.enum(['aceptar', 'rechazar']), autor: z.string().optional() });
+app.post('/conflictos/:id/resolver', async (c) => {
+  const body = ResolverConflicto.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: body.error.issues }, 400);
+  const id = c.req.param('id');
+  if ((await valkey.zscore(K.conflictos, id)) == null) return c.json({ error: 'no está pendiente' }, 404);
+  const h = await valkey.hgetall(K.conflicto(id));
+  let version: number | undefined;
+  if (body.data.decision === 'aceptar') {
+    const p = await forzarCampos(h.pacienteId, JSON.parse(h.propuesto) as TCampos);
+    if (!p) return c.json({ error: 'la paciente no existe' }, 409);
+    version = p.version;
+  }
+  await valkey.multi().zrem(K.conflictos, id).hset(K.conflicto(id), { estado: body.data.decision, resuelto: new Date().toISOString() }).expire(K.conflicto(id), 60 * 60 * 24 * 30).exec();
+  await bitacora({ tipo: `conflicto-${body.data.decision}`, pacienteId: h.pacienteId, conflictoId: id, campos: Object.keys(JSON.parse(h.propuesto)).join(','), autor: body.data.autor ?? 'coordinadora', version });
+  return c.json({ ok: true, ...(version ? { version } : {}) });
+});
+
+// --- Bitácora (Reto 1): quién, qué, cuándo, de qué paciente. Sin datos clínicos.
+const Bitacora = z.object({ limite: z.coerce.number().int().min(1).max(500).default(50), pacienteId: z.string().optional() });
+app.get('/bitacora', async (c) => {
+  const q = Bitacora.safeParse(c.req.query());
+  if (!q.success) return c.json({ error: q.error.issues }, 400);
+  const { limite, pacienteId } = q.data;
+  const out: Record<string, unknown>[] = [];
+  let fin = '+';
+  while (out.length < limite) {
+    const filas = (await valkey.xrevrange(K.eventos, fin, '-', 'COUNT', 500)) as [string, string[]][];
+    for (const [sid, plano] of filas) {
+      const f: Record<string, string> = {};
+      for (let i = 0; i < plano.length; i += 2) f[plano[i]] = plano[i + 1];
+      // Entradas viejas (antes del Reto 1) usaban a/b/estudio.
+      const fila = {
+        id: sid,
+        cuando: new Date(Number(sid.split('-')[0])).toISOString(),
+        tipo: f.tipo,
+        autor: f.autor ?? null,
+        dispositivo: f.dispositivo ?? null,
+        pacienteId: f.pacienteId ?? f.a ?? null,
+        ...(f.otraPacienteId ?? f.b ? { otraPacienteId: f.otraPacienteId ?? f.b } : {}),
+        ...(f.estudioId ?? f.estudio ? { estudioId: f.estudioId ?? f.estudio } : {}),
+        ...(f.visitaId ? { visitaId: f.visitaId } : {}),
+        ...(f.conflictoId ? { conflictoId: f.conflictoId } : {}),
+        ...(f.campos ? { campos: f.campos.split(',') } : {}),
+        ...(f.version ? { version: Number(f.version) } : {}),
+      };
+      if (pacienteId && fila.pacienteId !== pacienteId && fila.otraPacienteId !== pacienteId) continue;
+      out.push(fila);
+      if (out.length >= limite) break;
+    }
+    if (filas.length < 500) break;
+    fin = '(' + filas[filas.length - 1][0];
+  }
+  return c.json(out);
+});
+
 app.get('/estadisticas', async (c) => c.json({
   pacientes: await valkey.scard(K.todas),
   duplicadosPendientes: await valkey.zcard(K.duplicados),
   eventos: await valkey.xlen(K.eventos),
   seguimientoPendiente: await valkey.zcard(K.seguimiento),
   seguimientoVencido: await valkey.zcount(K.seguimiento, '-inf', Date.now()),
+  conflictosPendientes: await valkey.zcard(K.conflictos),
 }));
 
 export async function cerrar() {
