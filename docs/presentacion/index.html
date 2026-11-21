@@ -97,23 +97,24 @@
   .portada .iphone::after { top: 24px; height: 32px; border-radius: 16px; }
 
   /* 2. La semana */
-  .semana { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 88px; }
-  .parada { position: relative; padding-right: 56px; }
-  .parada .dia { font-family: var(--redondo); font-size: 64px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; height: 64px; white-space: nowrap; }
-  .parada .dia span { color: var(--rosa); font-variant-numeric: tabular-nums; margin-left: 14px; }
-  .riel { position: relative; height: 24px; margin: 40px 0 36px; }
+  .semana { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 72px; }
+  .parada { position: relative; padding-right: 44px; }
+  .parada .dia { font-family: var(--redondo); font-size: 52px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; height: 52px; white-space: nowrap; }
+  .riel { position: relative; height: 24px; margin: 36px 0 32px; }
   .riel .punto { position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--fondo); border: 6px solid currentColor; z-index: 1; }
-  .riel .tramo { position: absolute; left: 24px; right: -0px; top: 10px; height: 4px; border-radius: 2px; }
-  .parada:nth-child(1) .riel { color: var(--ambar); }
-  .parada:nth-child(1) .tramo { background: repeating-linear-gradient(90deg, var(--ambar) 0 14px, transparent 14px 26px); }
-  .parada:nth-child(2) .riel { color: var(--verde); }
-  .parada:nth-child(2) .tramo { background: var(--verde); }
-  .parada:nth-child(3) .riel { color: var(--rosa); }
-  .parada .lugar { font-size: 40px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
-  .parada .estado { font-size: 26px; color: var(--gris); margin-top: 6px; }
-  .parada .pildora { margin-top: 28px; }
-  .parada .pasa { font-size: 28px; line-height: 1.35; color: var(--tinta-2); margin-top: 24px; max-width: 470px; text-wrap: balance; }
-  .dato { margin-top: auto; margin-bottom: 140px; padding-top: 44px; border-top: 1px solid var(--linea); display: flex; align-items: baseline; justify-content: space-between; gap: 48px; }
+  .riel .tramo { position: absolute; left: 24px; right: -0px; top: 10px; height: 4px; border-radius: 2px; background: currentColor; }
+  /* Verde con señal, ámbar punteado sin señal, rosa en la oficina */
+  .parada:nth-child(1) .riel { color: var(--verde); }
+  .parada:nth-child(1) .tramo { background: var(--verde); }
+  .parada:nth-child(2) .riel { color: var(--ambar); }
+  .parada:nth-child(2) .tramo { background: repeating-linear-gradient(90deg, var(--ambar) 0 14px, transparent 14px 26px); }
+  .parada:nth-child(3) .riel { color: var(--verde); }
+  .parada:nth-child(4) .riel { color: var(--rosa); }
+  .parada .lugar { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+  .parada .estado { font-size: 24px; color: var(--gris); margin-top: 6px; }
+  .parada .pildora { margin-top: 24px; }
+  .parada .pasa { font-size: 26px; line-height: 1.35; color: var(--tinta-2); margin-top: 22px; text-wrap: pretty; }
+  .dato { margin-top: auto; margin-bottom: 120px; padding-top: 44px; border-top: 1px solid var(--linea); display: flex; align-items: baseline; justify-content: space-between; gap: 48px; }
   .dato q { quotes: "«" "»"; font-size: 50px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; max-width: 1220px; text-wrap: balance; }
   .dato q em { font-style: normal; color: var(--rosa); }
   .dato .quien { font-size: 24px; color: var(--gris); white-space: nowrap; }
@@ -129,11 +130,15 @@
   .paso .t { font-size: 31px; font-weight: 700; line-height: 40px; white-space: nowrap; }
   .paso .d { font-size: 24px; line-height: 1.35; color: var(--gris); margin-top: 4px; }
 
-  /* 4. Viernes */
-  .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 64px; }
-  .panel figcaption { display: flex; gap: 16px; align-items: baseline; margin-top: 32px; }
-  .panel figcaption b { font-size: 30px; font-weight: 700; flex: none; }
-  .panel figcaption span { font-size: 26px; line-height: 1.35; color: var(--gris); }
+  /* 4. La oficina: cuatro vistas del panel, recortadas a la parte de arriba */
+  .of-rejilla { display: grid; grid-template-columns: repeat(2, 760px); justify-content: space-between; row-gap: 28px; margin-top: 36px; }
+  .of-rejilla .navegador .barra { height: 30px; padding: 0 14px; gap: 7px; }
+  .of-rejilla .navegador .barra i { width: 10px; height: 10px; }
+  .of-rejilla .navegador .barra span { font-size: 13px; margin-left: 12px; }
+  .of-rejilla .navegador img { aspect-ratio: 1440 / 520; }
+  .of-rejilla figcaption { display: flex; gap: 14px; align-items: baseline; margin-top: 14px; }
+  .of-rejilla figcaption b { font-size: 26px; font-weight: 700; flex: none; }
+  .of-rejilla figcaption span { font-size: 23px; line-height: 1.3; color: var(--gris); text-wrap: balance; }
 
   /* 5. Quién ve qué */
   .roles { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 64px; }
@@ -246,14 +251,14 @@
       </svg>
       </div>
       <h1 class="entra" style="--d:1">Expediente Rosa</h1>
-      <p class="que entra" style="--d:2">El expediente de cada paciente de las brigadas de EIRA: una app de iPhone que funciona sin señal y un panel web para coordinación y patología.</p>
+      <p class="que entra" style="--d:2">Los expedientes de las pacientes de EIRA: una app para la brigada, que trabaja días sin señal, y un panel web para la oficina.</p>
       <div class="reto entra" style="--d:3">
         <img src="eira-logo.png" alt="Logo de EIRA Movimiento Rosa">
         <div class="t">Reto de EIRA Movimiento Rosa A.C.<small>Nerdearla Vibeathon · CDMX · 21 de noviembre de 2026</small></div>
       </div>
     </div>
     <div class="der entra" style="--d:2">
-      <div class="iphone"><img src="../diseno/capturas/iter5-jornada.png" alt="Pantalla Jornada de la app: sin señal, 3 registros por mandar"></div>
+      <div class="iphone"><img src="../diseno/capturas/qa-iphone-jornada.png" alt="Pantalla Jornada: próxima jornada en San Martín Peras con 12 pacientes listas en el teléfono; sin señal, 3 registros por mandar, y la mascota con su nube"></div>
     </div>
     <p class="ficticias">Personas ficticias. El problema y las cifras son de EIRA.</p>
   </section>
@@ -263,28 +268,36 @@
     <h2>La semana de una brigada</h2>
     <div class="semana">
       <div class="parada entra" style="--d:0">
-        <div class="dia">Martes<span>9:40</span></div>
+        <div class="dia">Lunes</div>
+        <div class="riel"><i class="punto"></i><i class="tramo"></i></div>
+        <div class="lugar">Ciudad Guzmán</div>
+        <div class="estado">Coordinación</div>
+        <span class="pildora verde"><svg><use href="#senal"/></svg>Con señal</span>
+        <p class="pasa">Programa la jornada en el panel. El teléfono baja solo las 12 historias.</p>
+      </div>
+      <div class="parada entra" style="--d:1">
+        <div class="dia">Miércoles</div>
         <div class="riel"><i class="punto"></i><i class="tramo"></i></div>
         <div class="lugar">San Martín Peras</div>
         <div class="estado">Mixteca de Oaxaca</div>
         <span class="pildora ambar"><svg><use href="#sin-senal"/></svg>Sin señal</span>
-        <p class="pasa">Rocío escanea la hoja de Eulalia; el médico registra su estudio.</p>
+        <p class="pasa">Rocío escanea la hoja de Eulalia y el médico registra su estudio.</p>
       </div>
       <div class="parada entra" style="--d:2">
-        <div class="dia">Jueves<span>18:20</span></div>
+        <div class="dia">Al volver</div>
         <div class="riel"><i class="punto"></i><i class="tramo"></i></div>
-        <div class="lugar">Juxtlahuaca</div>
-        <div class="estado">Oaxaca</div>
+        <div class="lugar">En el camino</div>
+        <div class="estado">La app sincroniza sola</div>
         <span class="pildora verde"><svg><use href="#senal"/></svg>Vuelve la señal</span>
-        <p class="pasa">Rocío sincroniza. Nada se duplica.</p>
+        <p class="pasa">Cada registro lleva una llave: nada se duplica aunque se corte a la mitad.</p>
       </div>
-      <div class="parada entra" style="--d:4">
-        <div class="dia">Viernes</div>
+      <div class="parada entra" style="--d:3">
+        <div class="dia">Después</div>
         <div class="riel"><i class="punto"></i></div>
-        <div class="lugar">Ciudad Guzmán</div>
-        <div class="estado">Jalisco</div>
-        <span class="pildora rosa"><svg><use href="#tablero"/></svg>Coordinación y patología</span>
-        <p class="pasa">Ven las 13 mujeres de San Martín Peras y sus estudios.</p>
+        <div class="lugar">En la oficina</div>
+        <div class="estado">Panel web</div>
+        <span class="pildora rosa"><svg><use href="#tablero"/></svg>Coordinación</span>
+        <p class="pasa">Patología, seguimiento y el asistente.</p>
       </div>
     </div>
     <div class="dato entra" style="--d:6">
@@ -298,38 +311,47 @@
     <h2>En el iPhone, sin señal</h2>
     <div class="pasos">
       <div class="paso entra" style="--d:0">
-        <div class="iphone"><img src="../diseno/capturas/iter5-buscar-resultados.png" alt="Buscar: «Ma. Guadalupe Hdz Velasquez» encuentra a María Guadalupe Hernández Velázquez con puntaje 100 y razones"></div>
-        <div class="pie"><span class="n">1</span><div><div class="t">Buscar</div><p class="d">Aunque el nombre venga mal escrito.</p></div></div>
+        <div class="iphone"><img src="../diseno/capturas/buscar-v2-buscar-hoja-p2.png" alt="Buscar con los datos de la hoja escaneada: encuentra a María Guadalupe Hernández Velázquez con puntaje 100 y las razones"></div>
+        <div class="pie"><span class="n">1</span><div><div class="t">Escanear hoja</div><p class="d">La reconoce aunque venga escrita distinto.</p></div></div>
       </div>
       <div class="paso entra" style="--d:1">
         <div class="iphone"><img src="../diseno/capturas/reto1-expediente-medico.png" alt="Expediente visto por el médico: visitas, ultrasonido anormal BI-RADS 3 y mastografía normal"></div>
-        <div class="pie"><span class="n">2</span><div><div class="t">Expediente</div><p class="d">El médico ve el historial y agrega estudios.</p></div></div>
+        <div class="pie"><span class="n">2</span><div><div class="t">Expediente</div><p class="d">Solo el médico ve los resultados.</p></div></div>
       </div>
       <div class="paso entra" style="--d:2">
-        <div class="iphone"><img src="../diseno/capturas/iter5-alta.png" alt="Nueva paciente: datos mínimos y consentimiento; el botón dice «Falta: firma»"></div>
-        <div class="pie"><span class="n">3</span><div><div class="t">Nueva paciente</div><p class="d">Sin firma no se guarda.</p></div></div>
+        <div class="iphone"><img src="../diseno/capturas/reto1-estudio.png" alt="Estudio de hoy: mastografía anormal, BI-RADS 4, conducta Referencia"></div>
+        <div class="pie"><span class="n">3</span><div><div class="t">Estudio de hoy</div><p class="d">La app llena BI-RADS; el médico revisa.</p></div></div>
       </div>
       <div class="paso entra" style="--d:3">
-        <div class="iphone"><img src="../diseno/capturas/iter5-jornada.png" alt="Jornada: sin señal, 3 registros por mandar y botón Sincronizar"></div>
-        <div class="pie"><span class="n">4</span><div><div class="t">Sincronizar</div><p class="d">Cada registro llega una sola vez.</p></div></div>
+        <div class="iphone"><img src="../diseno/capturas/iter5-alta.png" alt="Nueva paciente: datos mínimos y consentimiento; el botón dice «Falta: firma»"></div>
+        <div class="pie"><span class="n">4</span><div><div class="t">Nueva paciente</div><p class="d">Sin firma no se guarda.</p></div></div>
       </div>
     </div>
   </section>
 
-  <!-- 4. Coordinación y patología -->
-  <section class="slide" aria-label="Coordinación y patología">
-    <h2>Viernes, Ciudad Guzmán</h2>
-    <p class="bajada">El panel web junta lo que mandaron todas las brigadas.</p>
-    <div class="panel">
+  <!-- 4. La oficina -->
+  <section class="slide" aria-label="La oficina">
+    <h2>En la oficina</h2>
+    <div class="of-rejilla">
       <figure class="entra" style="--d:0">
         <div class="navegador"><div class="barra"><i></i><i></i><i></i><span>localhost:8787/panel</span></div>
-          <img src="../diseno/capturas/panel-p1-tablero.png" alt="Tablero de Coordinación: personas únicas, estudios, anormales, pendientes de patología y seguimiento vencido, por estado y comunidad"></div>
-        <figcaption><b>Coordinación</b><span>Personas, estudios y anormales por comunidad.</span></figcaption>
+          <img src="../diseno/capturas/panel-jornadas-p1-lista.png" alt="Jornadas: San Martín Peras el miércoles 25 de noviembre con 12 pacientes con expediente, luego Huejuquilla y Metlatónoc"></div>
+        <figcaption><b>Jornadas</b><span>Coordinación programa la visita y quién va.</span></figcaption>
+      </figure>
+      <figure class="entra" style="--d:1">
+        <div class="navegador"><div class="barra"><i></i><i></i><i></i><span>localhost:8787/panel</span></div>
+          <img src="../diseno/capturas/panel-mascota-p2-tablero-guino.png" alt="Tablero filtrado a Oaxaca: personas únicas, estudios, anormales, pendientes de patología y seguimiento vencido"></div>
+        <figcaption><b>Tablero</b><span>Lo que trajo cada brigada, por comunidad.</span></figcaption>
       </figure>
       <figure class="entra" style="--d:2">
         <div class="navegador"><div class="barra"><i></i><i></i><i></i><span>localhost:8787/panel</span></div>
-          <img src="../diseno/capturas/panel-p1-patologia.png" alt="Patología: papanicolaous por interpretar, el que más espera primero, con clasificación Bethesda"></div>
+          <img src="../diseno/capturas/panel-patologia.png" alt="Patología: papanicolaous por interpretar, el que más espera primero, con clasificación Bethesda"></div>
         <figcaption><b>Patología</b><span>Interpreta los papanicolaous; el que más espera va primero.</span></figcaption>
+      </figure>
+      <figure class="entra" style="--d:3">
+        <div class="navegador"><div class="barra"><i></i><i></i><i></i><span>localhost:8787/panel</span></div>
+          <img src="../diseno/capturas/panel-mascota-p2-asistente-contenta.png" alt="Asistente de coordinación con la mascota: responde qué papanicolaous llevan más tiempo esperando, con el modelo de Apple en esta Mac y sin nube"></div>
+        <figcaption><b>Asistente</b><span>Corre con el modelo de Apple en esta Mac; las cifras salen de la base.</span></figcaption>
       </figure>
     </div>
   </section>
@@ -343,24 +365,8 @@
       <tbody>
         <tr class="entra" style="--d:0"><td>Enfermería</td><td class="donde">iPhone</td><td>Busca, da de alta con firma, escanea hojas</td><td class="ve">Datos y visitas, <span class="candado"><svg><use href="#candado"/></svg>sin resultados</span></td></tr>
         <tr class="entra" style="--d:1"><td>Médico</td><td class="donde">iPhone</td><td>Agrega estudios y resultados</td><td class="ve">El historial completo, con BI-RADS</td></tr>
-        <tr class="entra" style="--d:2"><td>Coordinación</td><td class="donde">Panel web e iPhone</td><td>Decide duplicados y conflictos</td><td class="ve">Tablero, seguimiento y bitácora</td></tr>
+        <tr class="entra" style="--d:2"><td>Coordinación</td><td class="donde">Panel web e iPhone</td><td>Programa jornadas; decide duplicados y conflictos</td><td class="ve">Tablero, seguimiento, bitácora y asistente</td></tr>
         <tr class="entra" style="--d:3"><td>Patología</td><td class="donde">Panel web</td><td>Interpreta papanicolaous (Bethesda)</td><td class="ve">Solo las muestras por interpretar</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- Lo que pidió EIRA -->
-  <section class="slide" aria-label="Lo que pidió EIRA">
-    <h2>Lo que pidió EIRA en el Reto 1</h2>
-    <table class="roles pedidos">
-      <thead><tr><th scope="col">Pidió</th><th scope="col">Cómo quedó</th></tr></thead>
-      <tbody>
-        <tr class="entra" style="--d:0"><td>Identificador estable por paciente</td><td>ID interno y folio que se generan en el teléfono, sin señal</td></tr>
-        <tr class="entra" style="--d:1"><td>Coincidencias con confirmación humana</td><td>Nombre, apellidos, edad y comunidad; la enfermera o coordinación decide. Nunca se une sola</td></tr>
-        <tr class="entra" style="--d:2"><td>Captura sin internet</td><td>Todo vive en el teléfono hasta 3 días; la jornada se baja sola antes de salir</td></tr>
-        <tr class="entra" style="--d:3"><td>Sincronización con detección de conflictos</td><td>Llave única por registro (Valkey no duplica) y versión por ficha: el cambio viejo va a Revisión</td></tr>
-        <tr class="entra" style="--d:4"><td>Visitas y servicios por separado</td><td>Cada visita con sus estudios, BI-RADS, Bethesda y conducta</td></tr>
-        <tr class="entra" style="--d:5"><td>Roles y bitácora de cambios</td><td>Enfermería, Médico, Coordinación y Patología; bitácora de quién, qué y cuándo, sin datos clínicos</td></tr>
       </tbody>
     </table>
   </section>
@@ -376,9 +382,9 @@
     <div class="dos">
       <div>
         <h3>Datos de salud de mujeres en comunidades rurales</h3>
-        <div class="renglon entra" style="--d:0"><b>Datos mínimos</b><span>Nombre, edad y comunidad. Sin CURP, teléfono ni domicilio.</span></div>
+        <div class="renglon entra" style="--d:0"><b>Datos mínimos, cifrados</b><span>Nombre, edad y comunidad, cifrados. Sin CURP, teléfono ni domicilio.</span></div>
         <div class="renglon entra" style="--d:1"><b>Consentimiento firmado</b><span>En la pantalla. La LFPDPPP 2025 lo pide expreso para datos de salud.</span></div>
-        <div class="renglon entra" style="--d:2"><b>IA en el teléfono</b><span>Leer hojas, explicar coincidencias y resumir no usa la nube.</span></div>
+        <div class="renglon entra" style="--d:2"><b>IA de Apple, sin nube</b><span>El teléfono lee hojas y explica coincidencias; el asistente corre en la Mac.</span></div>
         <div class="renglon entra" style="--d:3"><b>Nunca se fusiona sola</b><span>Coordinación decide si dos fichas son la misma mujer.</span></div>
         <div class="renglon entra" style="--d:4"><b>Bitácora sin datos clínicos</b><span>Quién hizo qué y cuándo, sin resultados.</span></div>
       </div>
@@ -391,6 +397,22 @@
         <div class="renglon entra" style="--d:5"><code>Pub/sub</code><span>El tablero se actualiza en vivo.</span></div>
       </div>
     </div>
+  </section>
+
+  <!-- 8. Lo que pidió EIRA -->
+  <section class="slide" aria-label="Lo que pidió EIRA">
+    <h2>Lo que pidió EIRA en el Reto 1</h2>
+    <table class="roles pedidos">
+      <thead><tr><th scope="col">Pidió</th><th scope="col">Cómo quedó</th></tr></thead>
+      <tbody>
+        <tr class="entra" style="--d:0"><td>Identificador estable por paciente</td><td>ID interno y folio que se generan en el teléfono, sin señal</td></tr>
+        <tr class="entra" style="--d:1"><td>Coincidencias con confirmación humana</td><td>Nombre, apellidos, edad y comunidad; la enfermera o coordinación decide. Nunca se une sola</td></tr>
+        <tr class="entra" style="--d:2"><td>Captura sin internet</td><td>Todo vive en el teléfono hasta 3 días; la jornada se baja sola antes de salir</td></tr>
+        <tr class="entra" style="--d:3"><td>Sincronización con detección de conflictos</td><td>Llave única por registro (Valkey no duplica) y versión por ficha: el cambio viejo va a Revisión</td></tr>
+        <tr class="entra" style="--d:4"><td>Visitas y servicios por separado</td><td>Cada visita con sus estudios, BI-RADS, Bethesda y conducta</td></tr>
+        <tr class="entra" style="--d:5"><td>Roles y bitácora de cambios</td><td>Enfermería, Médico, Coordinación y Patología; bitácora de quién, qué y cuándo, sin datos clínicos</td></tr>
+      </tbody>
+    </table>
   </section>
 
   <!-- 9. Cierre -->
