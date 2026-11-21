@@ -37,8 +37,15 @@ struct ContentView: View {
             }
         }
         .task {
-            if sync == nil { sync = Sincronizador(contexto: contexto) }
+            if sync == nil {
+                let nuevo = Sincronizador(contexto: contexto)
+                Sincronizador.principal = nuevo
+                sync = nuevo
+            }
             Inteligencia.precalentar()
+            ExpedienteRosaApp.programarJornadas()
+            // Al abrir con señal: baja las jornadas programadas y sus pacientes.
+            if let sync, sync.enLinea { await sync.prepararProximas() }
         }
     }
 }

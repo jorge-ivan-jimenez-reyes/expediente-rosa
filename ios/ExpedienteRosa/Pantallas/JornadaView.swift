@@ -18,6 +18,7 @@ struct JornadaView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Tema.Espacio.l) {
+                    ProximaJornada()
                     estado
                     QuienVeQue()
                     if let resultado { tarjetaResultado(resultado) }
@@ -40,6 +41,7 @@ struct JornadaView: View {
                 .padding(Tema.Espacio.l)
                 .animation(Tema.resorte, value: resultado?.aplicados)
                 .animation(Tema.resorte, value: error)
+                .animation(Tema.resorte, value: sync.proximasJornadas.count)
             }
             .background(Tema.fondo)
             .navigationTitle("Jornada")
@@ -81,34 +83,54 @@ struct JornadaView: View {
         }
     }
 
-    private var preparar: some View {
-        Tarjeta {
-            Text("Preparar jornada").font(.seccion)
-            Text("Baja al teléfono las pacientes de la comunidad antes de salir.")
-                .font(.nota).foregroundStyle(.secondary)
-            selectorEstado
-            HStack(alignment: .bottom, spacing: Tema.Espacio.m) {
-                CampoTexto(titulo: "Comunidad", texto: $comunidad)
-                Button {
-                    Task { await prepararJornada() }
-                } label: {
-                    Group {
-                        if preparando { ProgressView() } else { Text("Bajar") }
-                    }
-                    .font(.seccion)
-                    .frame(minWidth: 64, minHeight: Tema.toque)
+    /// Bajar una comunidad a mano. Si coordinación programó jornadas, queda plegado como respaldo.
+    @ViewBuilder private var preparar: some View {
+        Group {
+            if sync.proximasJornadas.isEmpty {
+                Tarjeta {
+                    Text("Preparar jornada").font(.seccion)
+                    Text("Baja al teléfono las pacientes de la comunidad antes de salir.")
+                        .font(.nota).foregroundStyle(.secondary)
+                    camposPreparar
                 }
-                .buttonStyle(.glass)
-                .tint(Tema.rosa)
-                .disabled(!sync.enLinea || preparando)
-            }
-            if let preparadas {
-                Label("\(preparadas) pacientes en el teléfono", systemImage: "checkmark.circle.fill")
-                    .font(.nota).foregroundStyle(Tema.verde)
-                    .transition(.opacity)
+            } else {
+                Tarjeta {
+                    DisclosureGroup {
+                        VStack(alignment: .leading, spacing: Tema.Espacio.m) { camposPreparar }
+                            .padding(.top, Tema.Espacio.s)
+                    } label: {
+                        Text("Otra comunidad").font(.cuerpo).foregroundStyle(.primary)
+                    }
+                    .tint(.secondary)
+                    .frame(minHeight: Tema.toque)
+                }
             }
         }
         .animation(Tema.resorte, value: preparadas)
+    }
+
+    @ViewBuilder private var camposPreparar: some View {
+        selectorEstado
+        HStack(alignment: .bottom, spacing: Tema.Espacio.m) {
+            CampoTexto(titulo: "Comunidad", texto: $comunidad)
+            Button {
+                Task { await prepararJornada() }
+            } label: {
+                Group {
+                    if preparando { ProgressView() } else { Text("Bajar") }
+                }
+                .font(.seccion)
+                .frame(minWidth: 64, minHeight: Tema.toque)
+            }
+            .buttonStyle(.glass)
+            .tint(Tema.rosa)
+            .disabled(!sync.enLinea || preparando)
+        }
+        if let preparadas {
+            Label("\(preparadas) pacientes en el teléfono", systemImage: "checkmark.circle.fill")
+                .font(.nota).foregroundStyle(Tema.verde)
+                .transition(.opacity)
+        }
     }
 
     private var selectorEstado: some View {

@@ -30,6 +30,8 @@ targets:
         NSMicrophoneUsageDescription: Para dictar el resultado de un estudio.
         NSSpeechRecognitionUsageDescription: Para convertir el dictado en texto dentro del teléfono.
         NSLocalNetworkUsageDescription: Para sincronizar con el servidor de la jornada.
+        BGTaskSchedulerPermittedIdentifiers: [org.eira.expedienterosa.jornadas]
+        UIBackgroundModes: [fetch]
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
           NSAllowsArbitraryLoads: true

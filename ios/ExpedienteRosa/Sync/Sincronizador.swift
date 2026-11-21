@@ -33,6 +33,25 @@ final class Sincronizador {
     }
     /// Si es true, al volver la señal se sincroniza solo.
     var sincronizarAlVolver = true
+    /// Si es true, al volver la señal se bajan solas las jornadas programadas.
+    var prepararAlVolver = true
+
+    /// Jornadas que coordinación programó (la última lista que bajó el teléfono), por fecha.
+    private(set) var jornadas: [JornadaDTO] = []
+    /// Por id de jornada: cuándo se bajaron sus pacientes y cuántas.
+    private(set) var preparacion: [String: PreparacionJornada] = [:]
+    private(set) var preparandoProximas = false
+    /// Último error al bajar las jornadas programadas. nil si salió bien.
+    private(set) var errorJornadas: String?
+    /// Las de hoy en adelante. Vacío también si la API no tiene `/jornadas`.
+    var proximasJornadas: [JornadaDTO] {
+        let hoy = Calendar.current.startOfDay(for: .now)
+        return jornadas.filter { ($0.dia ?? hoy) >= hoy }
+    }
+    /// El que usa la app en primer plano; la tarea en segundo plano lo reutiliza si existe.
+    static weak var principal: Sincronizador?
+    static let llaveJornadas = "jornadas_programadas"
+    @ObservationIgnored private var persistirJornadas = true
 
     var api: ClienteAPI
     let contexto: ModelContext
@@ -47,6 +66,7 @@ final class Sincronizador {
         self.autor = autor
         self.monitor = vigilarRed ? NWPathMonitor() : nil
         actualizarPendientes()
+        cargarJornadas()
         monitor?.pathUpdateHandler = { [weak self] path in
             let hay = path.status == .satisfied
             Task { @MainActor in self?.cambioDeRed(hay) }
@@ -124,15 +144,97 @@ final class Sincronizador {
     func prepararJornada(comunidad: String) async throws -> Int {
         guard enLinea else { throw fallo(.sinSenal) }
         do {
-            let lista = try await api.pacientes(comunidad: comunidad)
-            try importar(lista)
+            let n = try await bajar(comunidad: comunidad)
             ultimoError = nil
-            return lista.count
+            return n
         } catch {
             ultimoError = error.localizedDescription
             throw error
         }
     }
+
+    private func bajar(comunidad: String) async throws -> Int {
+        let lista = try await api.pacientes(comunidad: comunidad)
+        try importar(lista)
+        return lista.count
+    }
+
+    // MARK: - Jornadas programadas
+
+    /// Pide a la API las jornadas de los próximos `dias` y baja las pacientes de cada comunidad
+    /// (una sola vez por comunidad). Guarda la lista y cuándo se preparó cada una en UserDefaults.
+    /// No lanza: sin señal no hace nada; si la API no tiene `/jornadas` (404) deja la lista vacía.
+    /// Devuelve true si todas quedaron listas.
+    @discardableResult
+    func prepararProximas(dias: Int = 7) async -> Bool {
+        guard enLinea, !preparandoProximas else { return false }
+        preparandoProximas = true
+        defer { preparandoProximas = false }
+        let lista: [JornadaDTO]
+        do {
+            lista = try await api.jornadas(dias: dias)
+        } catch ErrorSync.rechazado(404, _) {
+            jornadas = []; preparacion = [:]; errorJornadas = nil
+            guardarJornadas()
+            return false
+        } catch {
+            errorJornadas = error.localizedDescription
+            return false
+        }
+        jornadas = lista.sorted { ($0.fecha, $0.comunidad) < ($1.fecha, $1.comunidad) }
+        let ids = Set(lista.map(\.id))
+        preparacion = preparacion.filter { ids.contains($0.key) }
+        guardarJornadas()
+
+        var porComunidad: [String: Int] = [:]
+        var fallo: Error?
+        for j in jornadas {
+            if Task.isCancelled { break }
+            do {
+                let llave = j.comunidad.trimmingCharacters(in: .whitespaces).lowercased()
+                let n: Int
+                if let ya = porComunidad[llave] { n = ya } else {
+                    n = try await bajar(comunidad: j.comunidad)
+                    porComunidad[llave] = n
+                }
+                preparacion[j.id] = PreparacionJornada(en: .now, pacientes: n)
+                guardarJornadas()
+            } catch {
+                fallo = error
+            }
+        }
+        errorJornadas = fallo?.localizedDescription
+        return fallo == nil && !Task.isCancelled
+    }
+
+    /// Lee la lista guardada (sirve sin señal: la brigada ve a dónde va aunque no haya red).
+    func cargarJornadas() {
+        guard let datos = UserDefaults.standard.data(forKey: Self.llaveJornadas),
+              let g = try? JSONDecoder().decode(JornadasGuardadas.self, from: datos) else { return }
+        jornadas = g.lista
+        preparacion = g.preparacion
+    }
+
+    private func guardarJornadas() {
+        guard persistirJornadas,
+              let datos = try? JSONEncoder().encode(JornadasGuardadas(lista: jornadas, preparacion: preparacion)) else { return }
+        UserDefaults.standard.set(datos, forKey: Self.llaveJornadas)
+    }
+
+    private struct JornadasGuardadas: Codable {
+        var lista: [JornadaDTO]
+        var preparacion: [String: PreparacionJornada]
+    }
+
+    #if DEBUG
+    /// Modo captura: pone jornadas ficticias sin tocar lo guardado en el teléfono.
+    func usarJornadasDemo(_ lista: [JornadaDTO], preparacion: [String: PreparacionJornada]) {
+        persistirJornadas = false
+        prepararAlVolver = false
+        jornadas = lista
+        self.preparacion = preparacion
+    }
+    #endif
 
     /// Mete al teléfono las pacientes del servidor. Público para poder probarlo sin red.
     func importar(_ lista: [PacienteDTO]) throws {
@@ -234,6 +336,7 @@ final class Sincronizador {
 
     private func senalVolvio() {
         actualizarPendientes()
+        if prepararAlVolver { Task { await self.prepararProximas() } }
         guard sincronizarAlVolver, pendientes > 0, !sincronizando else { return }
         Task { try? await self.sincronizar() }
     }

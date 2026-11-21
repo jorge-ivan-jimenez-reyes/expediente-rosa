@@ -7,12 +7,12 @@ import UIKit
 /// FICTICIOS en un ModelContainer en memoria, sin red. Sirve para sacar capturas con
 /// `xcrun simctl io … screenshot` sin tocar el simulador.
 ///
-/// Pantallas: buscar, buscar-resultados, alta, expediente, expediente-medico, escanear, jornada, revision,
+/// Pantallas: buscar, buscar-resultados, alta, expediente, expediente-medico, escanear, jornada, jornada-pendiente, revision,
 /// y del Reto 1: editar, estudio, revision-conflictos, revision-seguimiento, bitacora.
 @MainActor
 enum ModoCaptura {
     static let pantallas = ["buscar", "buscar-resultados", "alta", "expediente", "expediente-medico",
-                            "escanear", "jornada", "revision",
+                            "escanear", "jornada", "jornada-pendiente", "revision",
                             "editar", "estudio", "revision-conflictos", "revision-seguimiento", "bitacora"]
 
     /// Lo que vino en `-pantalla` (los argumentos de lanzamiento entran a UserDefaults).
@@ -23,7 +23,7 @@ enum ModoCaptura {
 
     static var pestanaInicial: String {
         switch pantalla {
-        case "jornada": "jornada"
+        case "jornada", "jornada-pendiente": "jornada"
         case "revision", "revision-conflictos", "revision-seguimiento", "bitacora": "revision"
         default: "buscar"
         }
@@ -43,6 +43,24 @@ enum ModoCaptura {
         case "revision-seguimiento": .seguimiento
         default: .duplicados
         }
+    }
+
+    /// Jornadas programadas ficticias. `jornada`: la próxima ya está en el teléfono y la siguiente falta.
+    /// `jornada-pendiente`: ninguna se ha bajado (sin señal).
+    static var jornadasDemo: ([JornadaDTO], [String: PreparacionJornada]) {
+        let dia = { (n: Int) in
+            Date.ISO8601FormatStyle(timeZone: .current).year().month().day()
+                .format(Calendar.current.date(byAdding: .day, value: n, to: .now)!)
+        }
+        let lista = [
+            JornadaDTO(id: "j1", comunidad: "San Martín Peras", estado: "Oaxaca", municipio: "San Martín Peras", fecha: dia(4),
+                       equipo: ["enf-jux", "med-jux"], nota: "Salida a las 6:00 desde Juxtlahuaca.",
+                       pacientesPrevias: 12, estudiosPendientes: 3),
+            JornadaDTO(id: "j2", comunidad: "Metlatónoc", estado: "Guerrero", municipio: "Metlatónoc", fecha: dia(6),
+                       pacientesPrevias: 9, estudiosPendientes: 1),
+        ]
+        if pantalla == "jornada-pendiente" { return (lista, [:]) }
+        return (lista, ["j1": PreparacionJornada(en: .now.addingTimeInterval(-5 * 60), pacientes: 12)])
     }
 
     /// Folio de la paciente que abre `expediente` y `expediente-medico`.
@@ -219,7 +237,15 @@ struct RaizCaptura: View {
         // Servidor inexistente: el modo captura nunca toca la red.
         let s = Sincronizador(contexto: c.mainContext, api: ClienteAPI(base: URL(string: "http://127.0.0.1:1/api")!),
                               autor: "ios-captura", vigilarRed: false)
-        if ModoCaptura.pantalla == "jornada" { s.sincronizarAlVolver = false; s.simularSinSenal = true }
+        if ModoCaptura.pantalla == "jornada" || ModoCaptura.pantalla == "jornada-pendiente" {
+            s.sincronizarAlVolver = false; s.simularSinSenal = true
+        }
+        if ModoCaptura.pestanaInicial == "jornada" {
+            let (lista, prep) = ModoCaptura.jornadasDemo
+            s.usarJornadasDemo(lista, preparacion: prep)
+        } else {
+            s.usarJornadasDemo([], preparacion: [:])
+        }
         _contenedor = State(initialValue: c)
         _sync = State(initialValue: s)
     }

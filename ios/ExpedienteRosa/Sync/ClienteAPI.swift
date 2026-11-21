@@ -94,6 +94,18 @@ struct ClienteAPI: Sendable {
         return r.version
     }
 
+    // MARK: - Jornadas programadas
+
+    /// GET /api/jornadas?desde=YYYY-MM-DD&dias=N: lo que coordinación programó, desde hoy (zona del teléfono).
+    /// Si el servidor no tiene el endpoint lanza `ErrorSync.rechazado(404, …)`.
+    func jornadas(dias: Int = 7, desde: Date = .now) async throws -> [JornadaDTO] {
+        let dia = Date.ISO8601FormatStyle(timeZone: .current).year().month().day().format(desde)
+        return try await pedir([JornadaDTO].self, ruta: "jornadas", consulta: [
+            URLQueryItem(name: "desde", value: dia),
+            URLQueryItem(name: "dias", value: String(max(dias, 1))),
+        ])
+    }
+
     /// Ids del par: de las fichas, o de la llave "duplicado:<id1>|<id2>" si alguna ficha no vino.
     static func ids(de par: ParDuplicado) -> (String, String)? {
         if let a = par.a?.id, let b = par.b?.id { return (a, b) }

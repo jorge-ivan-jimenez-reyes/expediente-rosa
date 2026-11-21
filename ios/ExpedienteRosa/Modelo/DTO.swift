@@ -210,3 +210,47 @@ extension Visita {
                   registradaPor: registradaPor, estado: estado, jornada: jornada)
     }
 }
+
+// MARK: - Jornadas programadas (GET /api/jornadas)
+
+/// Jornada que coordinación programó en el panel: a qué comunidad va la brigada y qué día.
+struct JornadaDTO: Codable, Sendable, Identifiable, Hashable {
+    var id: String
+    var comunidad: String
+    var estado: String
+    var municipio: String?
+    var fecha: String            // "YYYY-MM-DD"
+    var equipo: [String]?
+    var nota: String?
+    var pacientesPrevias: Int
+    var estudiosPendientes: Int
+
+    init(id: String, comunidad: String, estado: String, municipio: String? = nil, fecha: String,
+         equipo: [String]? = nil, nota: String? = nil, pacientesPrevias: Int = 0, estudiosPendientes: Int = 0) {
+        self.id = id; self.comunidad = comunidad; self.estado = estado; self.municipio = municipio
+        self.fecha = fecha; self.equipo = equipo; self.nota = nota
+        self.pacientesPrevias = pacientesPrevias; self.estudiosPendientes = estudiosPendientes
+    }
+
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        comunidad = try c.decode(String.self, forKey: .comunidad)
+        estado = try c.decodeIfPresent(String.self, forKey: .estado) ?? ""
+        municipio = try c.decodeIfPresent(String.self, forKey: .municipio)
+        fecha = try c.decode(String.self, forKey: .fecha)
+        equipo = try c.decodeIfPresent([String].self, forKey: .equipo)
+        nota = try c.decodeIfPresent(String.self, forKey: .nota)
+        pacientesPrevias = try c.decodeIfPresent(Int.self, forKey: .pacientesPrevias) ?? 0
+        estudiosPendientes = try c.decodeIfPresent(Int.self, forKey: .estudiosPendientes) ?? 0
+    }
+
+    /// El día de la jornada en la zona del teléfono.
+    var dia: Date? { Fechas.leer(fecha) }
+}
+
+/// Cuándo se bajaron al teléfono las pacientes de una jornada y cuántas eran.
+struct PreparacionJornada: Codable, Sendable, Hashable {
+    var en: Date
+    var pacientes: Int
+}
