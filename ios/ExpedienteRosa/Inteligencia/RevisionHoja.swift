@@ -117,11 +117,43 @@ enum RevisionHoja {
         return nuevo
     }
 
+    /// Sin modelo (simulador o iPhone sin Apple Intelligence): lee los formatos de EIRA con reglas.
+    /// Nombre del renglón de «Nombre» (o el de arriba, donde suele quedar lo escrito a mano),
+    /// edad de «Edad en años», comunidad de «Residencia habitual». Lo que no se lee queda vacío.
+    static func pacienteSinModelo(_ texto: String) -> NuevaPaciente? {
+        let crudas = texto.split(whereSeparator: \.isNewline).map { String($0).trimmingCharacters(in: .whitespaces) }
+        let todo = plegar(texto)
+        func limpiar(_ l: String) -> String {
+            let primera = l.components(separatedBy: "   ").first ?? l          // Vision separa columnas con espacios
+            return primera.replacingOccurrences(of: #"^\s*\d+\.?\s*nombre[\s.:_]*"#, with: "", options: [.regularExpression, .caseInsensitive])
+                .trimmingCharacters(in: CharacterSet(charactersIn: " ._:-"))
+        }
+        func pareceNombre(_ l: String) -> Bool {
+            let p = plegar(l)
+            let palabras = l.split(separator: " ")
+            return palabras.count >= 2 && palabras.count <= 6 && !p.contains(where: \.isNumber)
+                && !["datos", "nombre", "formato", "prevencion", "entidad", "fecha", "folio"].contains(where: { p.contains($0) })
+        }
+        guard let i = crudas.firstIndex(where: { plegar($0).range(of: #"^\s*\d*\.?\s*nombre"#, options: .regularExpression) != nil }) else { return nil }
+        let candidatas = [limpiar(crudas[i]), i > 0 ? limpiar(crudas[i - 1]) : "", i + 1 < crudas.count ? limpiar(crudas[i + 1]) : ""]
+        guard let completo = candidatas.first(where: pareceNombre) else { return nil }
+        let palabras = completo.split(separator: " ").map(String.init)
+        let (nombre, paterno, materno): (String, String, String?) = palabras.count >= 3
+            ? (palabras.dropLast(2).joined(separator: " "), palabras[palabras.count - 2], palabras.last)
+            : (palabras[0], palabras[1], nil)
+        let edad = (primerGrupo(#/edad en anos\s*_*\s*(\d{2,3})/#, en: todo)).flatMap { Int($0) }
+        return NuevaPaciente(nombre: nombre, apellidoPaterno: paterno, apellidoMaterno: materno,
+                             nacimiento: nil, edad: edad, comunidad: residencia(en: texto) ?? "", municipio: nil)
+    }
+
     static func residencia(en texto: String) -> String? {
         let crudas = texto.split(whereSeparator: \.isNewline).map { String($0).trimmingCharacters(in: .whitespaces) }
         guard let i = crudas.firstIndex(where: { plegar($0).contains("residencia") }) else { return nil }
         let mismo = crudas[i].components(separatedBy: CharacterSet(charactersIn: ":")).last ?? ""
-        var candidata = plegar(mismo).contains("residencia") ? (i + 1 < crudas.count ? crudas[i + 1] : "") : mismo
+        let esEtiqueta = { (l: String) in l.range(of: #"^\s*\d+\s*\."#, options: .regularExpression) != nil }
+        var candidata = plegar(mismo).contains("residencia")
+            ? (crudas.dropFirst(i + 1).prefix(2).first { !esEtiqueta($0) && !$0.isEmpty } ?? "")
+            : mismo
         candidata = candidata.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? ""
         let limpia = plegar(candidata)
         guard limpia.count >= 3, !limpia.contains("telefono"), !estados.contains(limpia) else { return nil }

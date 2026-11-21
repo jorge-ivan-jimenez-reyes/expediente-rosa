@@ -90,7 +90,11 @@ enum Inteligencia {
     /// Segunda mitad de leerHoja, separada para probarla con texto.
     static func interpretarHoja(texto: String) async -> HojaLeida {
         var hoja = HojaLeida(textoCrudo: texto, paciente: nil, estudios: [])
-        guard disponible, !TextoIA.limpio(texto).isEmpty else { return hoja }
+        guard !TextoIA.limpio(texto).isEmpty else { return hoja }
+        guard disponible else {
+            hoja.paciente = RevisionHoja.pacienteSinModelo(texto)   // sin modelo: reglas del formato de EIRA
+            return hoja
+        }
         let sesion = LanguageModelSession(model: modelo, instructions: """
             Ayudas a capturar hojas de registro en papel de jornadas de tamizaje de cáncer de mama y \
             cervicouterino en comunidades rurales de México. Recibes el texto que leyó el OCR de una hoja; \
@@ -106,6 +110,9 @@ enum Inteligencia {
             (hoja.paciente, hoja.estudios) = RevisionHoja.revisar(r.content, texto: texto)
         } catch {
             registrar(error, en: "leerHoja")
+        }
+        if hoja.paciente == nil || hoja.paciente?.nombre.isEmpty == true {
+            hoja.paciente = RevisionHoja.pacienteSinModelo(texto) ?? hoja.paciente
         }
         return hoja
     }
