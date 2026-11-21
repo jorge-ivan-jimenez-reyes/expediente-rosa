@@ -84,8 +84,7 @@
   /* 1. Portada */
   .portada { padding-top: 0; flex-direction: row; align-items: center; justify-content: space-between; }
   .portada .izq { width: 1040px; }
-  .portada .icono { width: 128px; height: 128px; border-radius: 29px; box-shadow: var(--sombra); }
-  .portada h1 { font-size: 132px; line-height: 1; font-weight: 700; letter-spacing: -0.035em; margin-top: 56px; }
+  .portada h1 { font-size: 132px; line-height: 1; font-weight: 700; letter-spacing: -0.035em; margin-top: 44px; }
   .portada .que { font-size: 42px; line-height: 1.3; color: var(--tinta-2); margin-top: 32px; max-width: 980px; text-wrap: balance; }
   .reto { display: flex; align-items: center; gap: 28px; margin-top: 88px; padding-top: 40px; border-top: 1px solid var(--linea); }
   .reto img { height: 48px; width: auto; }
@@ -158,6 +157,40 @@
   .renglon span { display: block; font-size: 24px; line-height: 1.35; color: var(--gris); margin-top: 4px; }
   .renglon code { font-family: var(--mono); font-size: 29px; font-weight: 700; color: var(--rosa); }
 
+  /* Mascota (docs/diseno/mascota.svg): solo en la portada y en el cierre, nunca junto a resultados */
+  .mascota { display: block; overflow: visible; }
+  .mascota-cuerpo { transform-box: fill-box; transform-origin: 50% 100%; }
+  .mascota-mano { transform-box: fill-box; transform-origin: 38px 150px; transform: rotate(50deg); }
+  .mascota-ojo { transform-box: fill-box; transform-origin: center; }
+  /* Portada: 340 px; el cuadro trae 80 de aire por lado, así que la hoja queda alineada con el título */
+  .portada .mascota { width: 340px; height: 340px; margin: -69px 0 -69px -57px; }
+  /* Cierre */
+  .slide.mascota-cierre { padding: 0 var(--mx) 120px; align-items: center; justify-content: center; }
+  .mascota-cierre .mascota { width: 440px; height: 440px; margin: -60px 0 -40px; }
+  .mascota-repo { font-family: var(--mono); font-size: 40px; font-weight: 600; color: var(--tinta); letter-spacing: -0.01em; margin-top: 48px; white-space: nowrap; }
+  .mascota-repo span { color: var(--gris); font-weight: 400; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .mascota-cuerpo { animation: mascota-respira 1.7s ease-in-out infinite alternate; }
+    .mascota-ojo { animation: mascota-parpadea 4.6s linear infinite; }
+    .mascota-ojo + .mascota-ojo { animation-delay: .02s; }
+    /* La mano sale de detrás de la hoja (rotate) y luego saluda dos veces cada 4 s (transform) */
+    .portada.activa .mascota-mano { animation: mascota-sale .7s var(--curva) .45s both, mascota-ola 4s ease-in-out 1.15s infinite; }
+    .mascota-cierre.activa .mascota-salto { animation: mascota-brinca .62s .35s both; }
+  }
+  @keyframes mascota-respira { from { transform: scale(1, 1); } to { transform: scale(0.991, 1.022); } }
+  @keyframes mascota-parpadea { 0%, 95.5%, 100% { transform: none; } 97% { transform: scaleY(0.12); } }
+  @keyframes mascota-sale { from { rotate: 150deg; opacity: 0; } to { rotate: 0deg; opacity: 1; } }
+  @keyframes mascota-ola {
+    0%, 32%, 100% { transform: rotate(50deg); }
+    8% { transform: rotate(67deg); } 16% { transform: rotate(33deg); } 24% { transform: rotate(67deg); }
+  }
+  @keyframes mascota-brinca {
+    0% { transform: none; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+    45% { transform: translateY(-44px); animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.2); }
+    100% { transform: none; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .slide, .slide.antes, .slide.activa { transform: none; transition: opacity .15s linear, visibility 0s; }
     .entra, .activa .entra { opacity: 1; transform: none; transition: none; }
@@ -200,7 +233,18 @@
   <!-- 1. Portada -->
   <section class="slide portada" data-sin-cromo aria-label="Portada">
     <div class="izq">
-      <img class="icono entra" src="../diseno/logo.svg" alt="Logo de Expediente Rosa">
+      <div class="entra">
+      <svg class="mascota" viewBox="-80 -80 940 940" aria-hidden="true" focusable="false">
+        <g class="mascota-cuerpo">
+          <path fill="#C4006A" d="M134 110 H298 Q322 110 336 130 L368 178 H646 Q702 178 702 234 V478 H78 V166 Q78 110 134 110 Z"/>
+          <rect class="mascota-mano" x="640" y="356" width="76" height="162" rx="38" fill="#C4006A"/>
+          <rect x="87" y="239" width="606" height="422" rx="47" fill="#FFFFFF" stroke="#C4006A" stroke-width="18"/>
+          <g fill="#FF6FAE" fill-opacity="0.42"><ellipse cx="196" cy="519" rx="48" ry="27"/><ellipse cx="584" cy="519" rx="48" ry="27"/></g>
+          <g fill="#C4006A"><rect class="mascota-ojo" x="250" y="380" width="64" height="96" rx="32"/><rect class="mascota-ojo" x="466" y="380" width="64" height="96" rx="32"/></g>
+          <path d="M353 500 Q390 559 427 500 Z" fill="#C4006A" stroke="#C4006A" stroke-width="12" stroke-linejoin="round"/>
+        </g>
+      </svg>
+      </div>
       <h1 class="entra" style="--d:1">Expediente Rosa</h1>
       <p class="que entra" style="--d:2">El expediente de cada paciente de las brigadas de EIRA: una app de iPhone que funciona sin señal y un panel web para coordinación y patología.</p>
       <div class="reto entra" style="--d:3">
@@ -347,6 +391,22 @@
         <div class="renglon entra" style="--d:5"><code>Pub/sub</code><span>El tablero se actualiza en vivo.</span></div>
       </div>
     </div>
+  </section>
+
+  <!-- 9. Cierre -->
+  <section class="slide mascota-cierre" aria-label="Cierre">
+    <div class="entra">
+    <svg class="mascota" viewBox="-80 -80 940 940" aria-hidden="true" focusable="false">
+      <g class="mascota-salto"><g class="mascota-cuerpo">
+          <path fill="#C4006A" d="M134 110 H298 Q322 110 336 130 L368 178 H646 Q702 178 702 234 V478 H78 V166 Q78 110 134 110 Z"/>
+          <rect x="87" y="239" width="606" height="422" rx="47" fill="#FFFFFF" stroke="#C4006A" stroke-width="18"/>
+          <g fill="#FF6FAE" fill-opacity="0.42"><ellipse cx="196" cy="519" rx="48" ry="27"/><ellipse cx="584" cy="519" rx="48" ry="27"/></g>
+          <path d="M244 444 Q282 388 320 444 M460 444 Q498 388 536 444" fill="none" stroke="#C4006A" stroke-width="22" stroke-linecap="round"/>
+          <path d="M346 500 Q390 570 434 500 Z" fill="#C4006A" stroke="#C4006A" stroke-width="12" stroke-linejoin="round"/>
+      </g></g>
+    </svg>
+    </div>
+    <p class="mascota-repo entra" style="--d:2">github.com/jorge-ivan-jimenez-reyes/expediente-rosa <span>· MIT</span></p>
   </section>
 
   <div class="cromo" id="cromo">
