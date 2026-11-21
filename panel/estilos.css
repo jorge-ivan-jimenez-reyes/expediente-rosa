@@ -331,7 +331,7 @@ tr.elegida .enlace-fila { color: var(--rosa); }
 
 .vacio-vista { padding: var(--e6); text-align: center; display: grid; gap: var(--e2); justify-items: center; }
 .vacio-vista .icono { width: 28px; height: 28px; color: var(--verde); margin-bottom: var(--e1); }
-.vacio-vista p { max-width: 44ch; color: var(--tinta-2); }
+.vacio-vista p { max-width: 44ch; color: var(--tinta-2); text-wrap: pretty; }
 .vacio-vista b { font-size: var(--t-seccion); }
 
 .error { color: var(--rojo); font-size: var(--t-nota); }
@@ -530,6 +530,137 @@ a.folio:hover { text-decoration-color: var(--rosa); }
 }
 .boton.flotante .icono { width: 18px; height: 18px; }
 main:has(> .flotante) { padding-bottom: 112px; }
+
+/* ---------- Mascota (panel/mascota.js) ----------
+   Decorativa. Va chica y junto al texto que explica el estado; nunca junto a resultados
+   anormales ni en seguimiento vencido. Valores de docs/diseno/mascota.svg. */
+.mascota {
+  --m-rosa: #C4006A;          /* hoja de atrás, borde y mano */
+  --m-atras: var(--m-rosa);
+  --m-mano: var(--m-rosa);
+  --m-cara: #C4006A;          /* la cara siempre va sobre la hoja blanca */
+  --m-nube: #AEAEB2;
+  /* El cuadro trae aire para la mano, la nube y el salto: se dibuja 1.5× y se le quita a la caja. */
+  width: calc(var(--m-tam, 56px) * 1.5); height: calc(var(--m-tam, 56px) * 1.5);
+  margin: calc(var(--m-tam, 56px) * -0.25);
+  display: block; flex: none; overflow: visible; pointer-events: none;
+}
+:root[data-tema="oscuro"] .mascota { --m-rosa: #FF5FA8; --m-nube: #8E8E93; }
+.mascota.sobre-rosa { --m-atras: rgb(255 255 255 / 0.5); --m-mano: #fff; --m-nube: rgb(255 255 255 / 0.85); }
+.mascota .m-atras { fill: var(--m-atras); }
+.mascota .m-mano rect { fill: var(--m-mano); }
+.mascota .m-hoja { fill: #fff; stroke: var(--m-rosa); }
+.mascota.sobre-rosa .m-hoja { stroke: none; }
+.mascota .m-mejillas { fill: #FF6FAE; fill-opacity: 0.42; }
+.mascota .m-ojo rect { fill: var(--m-cara); }
+.mascota .m-trazo { fill: none; stroke: var(--m-cara); stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; }
+.mascota .m-relleno { fill: var(--m-cara); stroke: var(--m-cara); stroke-width: 12; stroke-linejoin: round; }
+.mascota .m-nube { fill: var(--m-nube); opacity: 0; }
+
+/* Expresión por estado: esto es lo único que queda con «Reducir movimiento». */
+.mascota .m-ojos-felices, .mascota .m-ojos-tranquilos, .mascota .m-boca { display: none; }
+.mascota[data-estado="contenta"] .m-ojos-redondos, .mascota[data-estado="sinSenal"] .m-ojos-redondos { display: none; }
+.mascota[data-estado="contenta"] .m-ojos-felices { display: inline; }
+.mascota[data-estado="sinSenal"] .m-ojos-tranquilos { display: inline; }
+.mascota:is([data-estado="reposo"], [data-estado="sinSenal"], :not([data-estado])) .m-boca-sonrisa { display: inline; }
+.mascota[data-estado="saluda"] .m-boca-abierta { display: inline; }
+.mascota[data-estado="contenta"] .m-boca-grande { display: inline; }
+.mascota[data-estado="buscando"] .m-boca-chica { display: inline; }
+.mascota[data-estado="sinSenal"] .m-nube { opacity: 1; }
+.mascota .m-mano { opacity: 0; transform: rotate(200deg); }
+.mascota.parpadea .m-ojo { transform: scaleY(0.12); }
+
+/* Movimiento */
+.mascota .m-respira { animation: m-respirar 3.4s ease-in-out infinite; }
+.mascota[data-estado="buscando"] .m-respira { animation-duration: 3s; }
+.mascota[data-estado="sinSenal"] .m-respira { animation-duration: 4.4s; }
+.mascota[data-estado="sinSenal"] .m-nube { animation: m-flotar 3.2s ease-in-out infinite; }
+.mascota[data-estado="saluda"] .m-salto { animation: m-brinco-saluda 3.2s ease-out var(--m-veces, infinite); }
+.mascota[data-estado="saluda"] .m-mano { animation: m-saludo 3.2s linear var(--m-veces, infinite); }
+.mascota[data-estado="contenta"] .m-salto { animation: m-brinco 1s ease-out 1; }
+.mascota[data-estado="buscando"] .m-mirada { animation: m-mirar 2s ease-in-out infinite; }
+.mascota[data-estado="buscando"] .m-boca-mirada { animation: m-mirar-boca 2s ease-in-out infinite; }
+.mascota[data-estado="buscando"] .m-giro { animation: m-ladear 2s ease-in-out infinite; }
+
+@keyframes m-respirar {
+  0%, 100% { transform: scale(1, 1); }
+  25% { transform: scale(0.991, 1.022); }
+  75% { transform: scale(1.009, 0.978); }
+}
+@keyframes m-flotar { 0%, 100% { transform: translateY(0); } 25% { transform: translateY(9px); } 75% { transform: translateY(-9px); } }
+/* Agacharse, saltar y caer con un resorte amortiguado. Unidades del dibujo (940 de lado). */
+@keyframes m-brinco-saluda {
+  0% { transform: translateY(0) scale(1, 1); }
+  3.75% { transform: translateY(0) scale(1.045, 0.93); animation-timing-function: cubic-bezier(0.33, 0.67, 0.67, 1); }
+  10% { transform: translateY(-58px) scale(0.98, 1.035); animation-timing-function: cubic-bezier(0.33, 0, 0.67, 0.33); }
+  16.25% { transform: translateY(0) scale(1.045, 0.925); animation-timing-function: ease-in-out; }
+  18.6% { transform: translateY(0) scale(1, 1); }
+  21% { transform: translateY(0) scale(0.986, 1.023); }
+  25.6% { transform: translateY(0) scale(1.004, 0.993); }
+  30%, 100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes m-brinco {
+  0% { transform: translateY(0) scale(1, 1); }
+  12% { transform: translateY(0) scale(1.045, 0.93); animation-timing-function: cubic-bezier(0.33, 0.67, 0.67, 1); }
+  29% { transform: translateY(-72px) scale(0.98, 1.035); animation-timing-function: cubic-bezier(0.33, 0, 0.67, 0.33); }
+  46% { transform: translateY(0) scale(1.045, 0.925); animation-timing-function: ease-in-out; }
+  53.5% { transform: translateY(0) scale(1, 1); }
+  61% { transform: translateY(0) scale(0.986, 1.023); }
+  76% { transform: translateY(0) scale(1.004, 0.993); }
+  90%, 100% { transform: translateY(0) scale(1, 1); }
+}
+/* La mano sale de detrás de la hoja con un resorte, saluda dos veces y se guarda. */
+@keyframes m-saludo {
+  0%, 4.375% { opacity: 0; transform: rotate(200deg); animation-timing-function: ease-out; }
+  5.625% { opacity: 1; transform: rotate(145deg); animation-timing-function: ease-out; }
+  7.5% { opacity: 1; transform: rotate(78deg); animation-timing-function: ease-out; }
+  10.625% { opacity: 1; transform: rotate(35deg); animation-timing-function: ease-in-out; }
+  13.75% { opacity: 1; transform: rotate(47deg); animation-timing-function: ease-in-out; }
+  20% { opacity: 1; transform: rotate(34deg); animation-timing-function: ease-in-out; }
+  26.25% { opacity: 1; transform: rotate(66deg); animation-timing-function: ease-in-out; }
+  32.5% { opacity: 1; transform: rotate(44deg); animation-timing-function: ease-in-out; }
+  37.5% { opacity: 1; transform: rotate(50deg); animation-timing-function: ease-in; }
+  47.4% { opacity: 1; transform: rotate(200deg); }
+  47.5%, 100% { opacity: 0; transform: rotate(200deg); }
+}
+/* Mira a un lado, se queda, regresa y mira al otro. */
+@keyframes m-mirar { 0%, 100% { transform: translateX(0); } 10%, 40% { transform: translateX(34px); } 50% { transform: translateX(0); } 60%, 90% { transform: translateX(-34px); } }
+@keyframes m-mirar-boca { 0%, 100% { transform: translateX(0); } 10%, 40% { transform: translateX(20px); } 50% { transform: translateX(0); } 60%, 90% { transform: translateX(-20px); } }
+@keyframes m-ladear { 0%, 100% { transform: rotate(0); } 10%, 40% { transform: rotate(1.5deg); } 50% { transform: rotate(0); } 60%, 90% { transform: rotate(-1.5deg); } }
+
+/* «Reducir movimiento»: sin salto ni respiración; solo la expresión (mano arriba, ojos a un lado). */
+@media (prefers-reduced-motion: reduce) {
+  .mascota .m-respira, .mascota .m-salto, .mascota .m-mano, .mascota .m-mirada, .mascota .m-boca-mirada, .mascota .m-giro, .mascota .m-nube { animation: none !important; }
+  .mascota[data-estado="saluda"] .m-mano { opacity: 1; transform: rotate(50deg); }
+  .mascota[data-estado="buscando"] .m-mirada { transform: translateX(27px); }
+  .mascota[data-estado="buscando"] .m-boca-mirada { transform: translateX(16px); }
+}
+
+/* Arranque: igual al de la app. Rosa, la mascota salta y saluda, y se desvanece hacia lo de abajo. */
+.arranque {
+  position: fixed; inset: 0; z-index: calc(var(--z-avisos) + 10);
+  display: grid; place-items: center;
+  background: #C4006A; color: #fff;
+  animation: arranque-sale 350ms var(--curva) 1000ms forwards;
+}
+.arranque .para {
+  position: absolute; left: 0; right: 0; bottom: 64px;
+  display: grid; justify-items: center; gap: 6px;
+  font-size: var(--t-nota); color: rgb(255 255 255 / 0.85);
+}
+.arranque .para b { font-weight: 500; }
+.arranque .para img { height: 34px; width: auto; display: block; filter: brightness(0) invert(1); }
+.arranque .para small { font-size: 0.75rem; }
+@keyframes arranque-sale { to { opacity: 0; visibility: hidden; } }
+
+/* Lugares */
+.vacio-vista .mascota { margin-bottom: calc(var(--m-tam) * -0.25 + var(--e2)); }
+.titulo-entrada { display: flex; align-items: center; gap: 20px; }
+.asistente.con-avatar { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--e4); align-items: start; }
+.asistente.con-avatar > .mascota { margin-top: calc(var(--m-tam) * -0.25 + 4px); }
+.boton.flotante .mascota { margin-left: calc(var(--m-tam) * -0.25 - 6px); }
+.guino { display: inline-flex; width: 28px; height: 24px; align-items: center; justify-content: center; opacity: 0; transform: translateY(2px); transition: opacity 200ms var(--curva), transform 200ms var(--curva); }
+.guino.ve { opacity: 1; transform: none; }
 
 /* ---------- Tablet ---------- */
 @media (max-width: 1080px) {

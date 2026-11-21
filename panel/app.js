@@ -64,6 +64,10 @@
   const TIPO_ESTUDIO = { mastografia: 'Mastografía', ultrasonido: 'Ultrasonido', papanicolaou: 'Papanicolaou', exploracion: 'Exploración' };
   const ESTADOS = ['Jalisco', 'Oaxaca', 'Guerrero'];
   const reducido = matchMedia('(prefers-reduced-motion: reduce)');
+  // Mascota (panel/mascota.js). Decorativa; si el archivo no cargó, el panel sigue igual.
+  const mascota = (estado, opciones) => (window.Mascota ? window.Mascota.crear(estado, opciones) : null);
+  const vacioConMascota = (titulo, texto, ...extra) => h('div', { class: 'vacio-vista' },
+    mascota('reposo', { tamano: 64 }), h('b', {}, titulo), h('p', {}, texto), ...extra);
 
   // ---------- Usuario (no es login: solo quién eres) ----------
   const LLAVE = 'expediente-rosa-panel:usuario';
@@ -210,6 +214,9 @@
   // ---------- 1. Entrada ----------
   function vistaEntrada(vista) {
     document.title = 'Expediente Rosa · Panel';
+    // Saluda cuando ya se fue el arranque (si no, el primer saludo queda tapado).
+    const saluda = mascota('reposo', { tamano: 48 });
+    if (saluda) arranqueListo.then(() => { if (saluda.isConnected) Mascota.cambiar(saluda, 'saluda'); });
     let rol = 'coordinacion';
     const cedula = h('label', { class: 'campo', hidden: true },
       h('span', {}, 'Cédula profesional (opcional)'),
@@ -237,7 +244,7 @@
     );
     vista.replaceChildren(h('div', { class: 'entrada' }, h('div', { class: 'panel' },
       h('div', { class: 'cabeza-entrada' }, h('div', { class: 'marca' }, h('img', { src: '/panel/logo.svg', alt: '' }), h('b', {}, 'Expediente Rosa')), cliente()),
-      h('h1', {}, '¿Quién eres?'),
+      h('div', { class: 'titulo-entrada' }, saluda, h('h1', {}, '¿Quién eres?')),
       form,
       h('p', { class: 'demo' }, 'Demo: sin contraseña.'),
     )));
@@ -263,12 +270,28 @@
 
     const corte = h('span', {}, 'Cargando…');
     const vivo = h('span', { class: 'pildora', hidden: true });
+    // Guiño: la mascota aparece contenta un momento junto a «En vivo» cuando llega trabajo de campo.
+    const guino = h('span', { class: 'guino', hidden: true });
+    const carita = mascota('reposo', { tamano: 28 });
+    if (carita) guino.append(carita);
+    let finGuino = null;
+    function guinar() {
+      if (!carita) return;
+      clearTimeout(finGuino);
+      guino.hidden = false;
+      requestAnimationFrame(() => guino.classList.add('ve'));
+      Mascota.cambiar(carita, 'contenta');
+      finGuino = setTimeout(() => {
+        guino.classList.remove('ve');
+        finGuino = setTimeout(() => { guino.hidden = true; carita.dataset.estado = 'reposo'; }, 220);
+      }, 1800);
+    }
     const ejemplo = h('span', { class: 'pildora ejemplo', hidden: true, title: 'La API todavía no tiene /api/resumen' }, h('span', { class: 'punto' }), 'Datos de ejemplo');
     const cuerpo = h('div', {}, esqueletoTablero());
 
     vista.append(
       h('div', { class: 'encabezado' },
-        h('div', {}, h('h1', {}, 'Tablero'), h('p', { class: 'meta' }, corte, vivo, ejemplo)),
+        h('div', {}, h('h1', {}, 'Tablero'), h('p', { class: 'meta' }, corte, vivo, guino, ejemplo)),
         h('div', { class: 'derecha filtros' },
           h('label', { class: 'campo' }, h('span', {}, 'Estado'), selEstado),
           h('label', { class: 'campo' }, h('span', {}, 'Comunidad'), selComunidad),
@@ -325,13 +348,15 @@
         es.onopen = () => { if (!abierta) { abierta = true; abiertas++; marcar(); } };
         es.onerror = () => { if (abierta) { abierta = false; abiertas--; marcar(); } };
         for (const ev of ['alta', 'estudio', 'visita', 'interpretacion', 'avisado', 'duplicado']) es.addEventListener(ev, pedirRecarga);
+        // Solo altas, estudios y visitas: una interpretación puede ser un resultado anormal.
+        for (const ev of ['alta', 'estudio', 'visita']) es.addEventListener(ev, guinar);
         fuentes.push(es);
       }
     }
 
     llenarComunidades();
     cargar();
-    return () => { cerrado = true; fuentes.forEach((f) => f.close()); clearInterval(sondeo); clearTimeout(recarga); };
+    return () => { cerrado = true; fuentes.forEach((f) => f.close()); clearInterval(sondeo); clearTimeout(recarga); clearTimeout(finGuino); };
   }
 
   function esqueletoTablero() {
@@ -399,7 +424,7 @@
           }, c.comunidad)),
           h('td', { class: 'tenue' }, c.estado),
           celdaN(c.personas), celdaN(c.estudios), celdaN(c.anormales, 'anormal'), celdaN(c.pendientesPatologia, 'pendiente'))))))
-        : h('p', { class: 'tenue' }, 'Sin jornadas registradas con este filtro.'));
+        : vacioConMascota('Sin jornadas con este filtro', 'Prueba con otro estado o comunidad, o quita los filtros.'));
 
     return [cifras, h('div', { class: 'rejilla' }, grafica, embudo), tabla];
   }
@@ -507,8 +532,7 @@
       elegida = m;
       ul.querySelectorAll('.muestra').forEach((b) => b.setAttribute('aria-current', b.closest('li').dataset.id === m?.estudio.id ? 'true' : 'false'));
       if (!m) {
-        detalle.replaceChildren(h('div', { class: 'vacio-vista' }, icono('normal'), h('b', {}, 'No hay muestras por interpretar'),
-          h('p', {}, 'Cuando una brigada regrese con papanicolaous, aparecen aquí.')));
+        detalle.replaceChildren(vacioConMascota('No hay muestras por interpretar', 'Cuando una brigada regrese con papanicolaous, aparecen aquí.'));
         return;
       }
       pintarFormulario(m);
@@ -682,9 +706,8 @@
       cuerpo.replaceChildren(ul);
     }
 
-    const vacio = () => h('div', { class: 'vacio-vista' },
-      h('b', {}, 'Sin jornadas programadas'),
-      h('p', {}, 'Programa la siguiente. Los teléfonos de la brigada bajan a las pacientes de esa comunidad antes de salir.'),
+    const vacio = () => vacioConMascota('Sin jornadas programadas',
+      'Programa la siguiente. Los teléfonos de la brigada bajan a las pacientes de esa comunidad antes de salir.',
       h('button', { class: 'boton secundario', type: 'button', onclick: () => abrirForm() }, 'Programar jornada'));
 
     function fila(j, siguiente) {
@@ -913,8 +936,7 @@
     contar();
 
     if (!filas.length) {
-      cuerpo.replaceChildren(h('div', { class: 'vacio-vista' }, icono('normal'), h('b', {}, 'Todas avisadas'),
-        h('p', {}, 'Cuando patología marque un resultado anormal, la paciente aparece aquí con su fecha límite.')));
+      vistaSeguimientoVacia(cuerpo);
       return;
     }
 
@@ -961,8 +983,7 @@
     tbody.querySelector('tr.elegida')?.scrollIntoView({ block: 'center', behavior: reducido.matches ? 'auto' : 'smooth' });
   }
   function vistaSeguimientoVacia(cuerpo) {
-    cuerpo.replaceChildren(h('div', { class: 'vacio-vista' }, icono('normal'), h('b', {}, 'Todas avisadas'),
-      h('p', {}, 'Cuando patología marque un resultado anormal, la paciente aparece aquí con su fecha límite.')));
+    cuerpo.replaceChildren(vacioConMascota('Todas avisadas', 'Cuando patología marque un resultado anormal, la paciente aparece aquí con su fecha límite.'));
   }
   // Como pedir(), pero distingue «la ruta no existe» para probar otra ruta real antes del ejemplo.
   async function pedirReal(ruta, cuerpo) {
@@ -1009,7 +1030,7 @@
       if (!r.ok) { cuerpo.replaceChildren(h('p', { class: 'error' }, `No se pudo leer la bitácora (${r.status}).`)); return; }
       ejemplo.hidden = !r.ejemplo;
       const filas = r.datos || [];
-      if (!filas.length) { cuerpo.replaceChildren(h('div', { class: 'vacio-vista' }, h('b', {}, 'Sin movimientos'), h('p', {}, 'Aquí aparece cada alta, estudio y aviso que llegue de las brigadas.'))); return; }
+      if (!filas.length) { cuerpo.replaceChildren(vacioConMascota('Sin movimientos', 'Aquí aparece cada alta, estudio y aviso que llegue de las brigadas.')); return; }
       cuerpo.replaceChildren(
         h('div', { class: 'tabla-caja' }, h('table', {},
           h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Cuándo'), h('th', { scope: 'col' }, 'Quién'), h('th', { scope: 'col' }, 'Qué'), h('th', { scope: 'col' }, 'Paciente'))),
@@ -1035,10 +1056,10 @@
   let modeloCaliente = false;
 
   function botonPreguntar(q) {
-    return h('a', { class: 'boton principal flotante', href: '#/' + conQuery('asistente', { comunidad: q.comunidad }) },
-      s('svg', { viewBox: '0 0 16 16', class: 'icono', 'aria-hidden': 'true' },
-        s('path', { d: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linejoin': 'round' })),
-      'Preguntar');
+    // La mascota es la cara del asistente; sin mascota.js queda el globo de antes.
+    const cara = mascota('reposo', { tamano: 26, sobreRosa: true }) || s('svg', { viewBox: '0 0 16 16', class: 'icono', 'aria-hidden': 'true' },
+      s('path', { d: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linejoin': 'round' }));
+    return h('a', { class: 'boton principal flotante', href: '#/' + conQuery('asistente', { comunidad: q.comunidad }) }, cara, 'Preguntar');
   }
 
   async function vistaAsistente(vista, q) {
@@ -1058,6 +1079,8 @@
       llenarSel();
     });
 
+    // La cara del asistente, junto a donde se le pregunta: busca mientras el modelo redacta.
+    const avatar = avatarAsistente = mascota(turnos.some((t) => t.estado === 'pensando') ? 'buscando' : 'reposo', { tamano: 44 });
     const campo = h('input', { id: 'pregunta', name: 'pregunta', autocomplete: 'off', maxlength: '500', required: true, placeholder: 'Escribe una pregunta' });
     const boton = h('button', { class: 'boton principal', type: 'submit' }, 'Preguntar');
     const lista = h('ol', { class: 'turnos', 'aria-label': 'Respuestas, la más nueva primero', 'aria-live': 'polite' });
@@ -1074,7 +1097,7 @@
       h('div', { class: 'encabezado' },
         h('div', {}, h('h1', {}, 'Asistente'), h('p', { class: 'meta' }, 'Las cifras salen de la base. El modelo de Apple las redacta en esta Mac, sin nube.')),
         h('div', { class: 'derecha' }, h('label', { class: 'campo' }, h('span', {}, 'Comunidad'), sel))),
-      h('section', { class: 'panel asistente' }, form),
+      h('section', { class: 'panel asistente' + (avatar ? ' con-avatar' : '') }, avatar, form),
       lista);
 
     function enviar(texto) {
@@ -1106,14 +1129,16 @@
 
     pintarLista();
     if (!turnos.length) campo.focus();
-    return () => { cerrado = true; clearInterval(reloj); alCambiar = () => {}; };
+    return () => { cerrado = true; clearInterval(reloj); alCambiar = () => {}; avatarAsistente = null; };
   }
 
   // La vista abierta avisa aquí cuándo cambia el estado (para el botón y los chips).
   let alCambiar = () => {};
+  let avatarAsistente = null;
   async function preguntarTurno(t) {
     t.estado = 'pensando'; t.inicio = Date.now();
     pintarTurno(t); alCambiar();
+    if (avatarAsistente) Mascota.cambiar(avatarAsistente, 'buscando');
     const r = await pedir('/api/asistente', { metodo: 'POST', cuerpo: { pregunta: t.pregunta, comunidad: t.comunidad || undefined, autor: `${usuario.nombre} (coordinación)` } });
     if (r.ok && r.datos?.respuesta) { t.estado = 'listo'; t.r = r.datos; if (r.datos.motor === 'apple') modeloCaliente = true; }
     else {
@@ -1121,6 +1146,11 @@
       t.error = r.ejemplo ? 'Esta API todavía no tiene el asistente. Reiníciala con el código nuevo.' : `No se pudo responder (${r.status}). Intenta otra vez.`;
     }
     pintarTurno(t); alCambiar();
+    // Contenta 2 s cuando llega la respuesta; si falló, de vuelta a reposo.
+    if (avatarAsistente) {
+      if (t.estado === 'listo') Mascota.cambiar(avatarAsistente, 'contenta', { volver: 'reposo', tras: 2000 });
+      else Mascota.cambiar(avatarAsistente, 'reposo');
+    }
   }
 
   function pintarTurno(t) {
@@ -1211,6 +1241,23 @@
   }
 
   // ---------- Arranque ----------
+  // Igual al de la app (ios/.../Arranque.swift): fondo rosa, la mascota salta y saluda,
+  // «Para EIRA Movimiento Rosa A.C.» abajo, y a 1 s se desvanece (0.35 s) hacia lo que hay debajo.
+  // Todo con animaciones CSS; al terminar se quita. Decorativo: el contenido de abajo ya está listo.
+  const arranqueListo = new Promise((listo) => {
+    const cara = mascota('saluda', { tamano: 160, sobreRosa: true });
+    if (!cara) return listo();
+    const capa = h('div', { class: 'arranque', 'aria-hidden': 'true' },
+      cara,
+      h('div', { class: 'para' }, h('b', {}, 'Para'), h('img', { src: '/panel/eira-logo.png', alt: '', width: '95', height: '34' }), h('small', {}, 'Movimiento Rosa A.C.')));
+    let quitada = false;
+    const quitar = () => { if (quitada) return; quitada = true; capa.remove(); listo(); };
+    capa.addEventListener('animationend', (ev) => { if (ev.target === capa) quitar(); });
+    capa.addEventListener('click', quitar);
+    setTimeout(quitar, 4000); // por si la pestaña estaba oculta y la animación no corrió
+    document.body.append(capa);
+  });
+
   window.addEventListener('hashchange', mostrar);
   mostrar();
 })();
