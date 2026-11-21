@@ -102,5 +102,5 @@ extension Rol {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Paciente.self, Estudio.self, EventoPendiente.self], inMemory: true)
+        .modelContainer(for: Esquema.modelos, inMemory: true)
 }

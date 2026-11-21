@@ -7,6 +7,6 @@ struct ExpedienteRosaApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Paciente.self, Estudio.self, EventoPendiente.self])
+        .modelContainer(for: Esquema.modelos)
     }
 }

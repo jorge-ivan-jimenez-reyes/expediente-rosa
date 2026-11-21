@@ -17,6 +17,7 @@ struct JornadaView: View {
             ScrollView {
                 VStack(spacing: Tema.Espacio.l) {
                     estado
+                    QuienVeQue()
                     if let resultado { tarjetaResultado(resultado) }
                     if let error {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -174,5 +175,48 @@ struct JornadaView: View {
             self.error = error.localizedDescription
         }
         preparando = false
+    }
+}
+
+/// Control de acceso explicado en una tarjeta. Tocar un rol lo elige (igual que el selector de arriba).
+struct QuienVeQue: View {
+    @AppStorage("rol") private var rol: Rol = .enfermeria
+
+    var body: some View {
+        Tarjeta(espacio: Tema.Espacio.xs) {
+            Text("Quién ve qué").font(.seccion).padding(.bottom, Tema.Espacio.xs)
+            ForEach(Rol.allCases) { r in
+                Button {
+                    withAnimation(Tema.resorte) { rol = r }
+                } label: {
+                    HStack(alignment: .center, spacing: Tema.Espacio.m) {
+                        Image(systemName: r.icono).foregroundStyle(Tema.rosa).frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.nombre).font(.cuerpo.weight(.semibold)).foregroundStyle(.primary)
+                            Text(r.permisos).font(.nota).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        if rol == r { Image(systemName: "checkmark").font(.nota.weight(.bold)).foregroundStyle(Tema.rosa) }
+                    }
+                    .padding(.horizontal, Tema.Espacio.s).padding(.vertical, Tema.Espacio.s)
+                    .frame(minHeight: Tema.toque)
+                    .background(rol == r ? Tema.rosaSuave : .clear, in: .rect(cornerRadius: Tema.Radio.campo))
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(rol == r ? .isSelected : [])
+            }
+        }
+        .sensoryFeedback(.selection, trigger: rol)
+    }
+}
+
+extension Rol {
+    var permisos: String {
+        switch self {
+        case .enfermeria: "Captura y registra. No ve resultados."
+        case .medico: "Ve resultados y agrega estudios."
+        case .coordinadora: "Revisa duplicados, conflictos y bitácora."
+        }
     }
 }

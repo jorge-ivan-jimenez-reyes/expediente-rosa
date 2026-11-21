@@ -48,6 +48,11 @@ final class Paciente {
     var creadaPor: String
     var creada: Date
     var fusionadaEn: String?
+    // Reto 1 (formato oficial de EIRA). Opcionales o con valor por defecto: SwiftData migra sola.
+    var entidadNacimiento: String?
+    var idEira: String?
+    /// Versión del servidor (1 en el alta). Las actualizaciones viajan con esta versión como base.
+    var version: Int = 1
 
     init(id: String = UUID().uuidString, folio: String = Paciente.nuevoFolio(), nombre: String, apellidoPaterno: String,
          apellidoMaterno: String? = nil, nacimiento: String? = nil, edad: Int? = nil, comunidad: String, municipio: String? = nil,
@@ -76,14 +81,56 @@ final class Estudio {
     var resultadoRaw: String
     var nota: String?
     var registradoPor: String
+    // Reto 1: visita a la que pertenece, clasificación («BI-RADS 4», «Bethesda: LSIL») y conducta a seguir.
+    var visitaId: String?
+    var clasificacion: String?
+    var conductaRaw: String?
 
+    var conducta: Conducta? { get { conductaRaw.flatMap(Conducta.init(rawValue:)) } set { conductaRaw = newValue?.rawValue } }
     var tipo: TipoEstudio { get { TipoEstudio(rawValue: tipoRaw) ?? .exploracion } set { tipoRaw = newValue.rawValue } }
     var resultado: Resultado { get { Resultado(rawValue: resultadoRaw) ?? .pendiente } set { resultadoRaw = newValue.rawValue } }
 
     init(id: String = UUID().uuidString, pacienteId: String, tipo: TipoEstudio, fecha: Date = .now,
-         resultado: Resultado = .pendiente, nota: String? = nil, registradoPor: String) {
+         resultado: Resultado = .pendiente, nota: String? = nil, registradoPor: String,
+         visitaId: String? = nil, clasificacion: String? = nil, conducta: Conducta? = nil) {
         self.id = id; self.pacienteId = pacienteId; self.tipoRaw = tipo.rawValue; self.fecha = fecha
         self.resultadoRaw = resultado.rawValue; self.nota = nota; self.registradoPor = registradoPor
+        self.visitaId = visitaId; self.clasificacion = clasificacion; self.conductaRaw = conducta?.rawValue
+    }
+}
+
+/// Reto 1: el día que la paciente vino a la jornada. Los estudios de ese día cuelgan de ella.
+@Model
+final class Visita {
+    @Attribute(.unique) var id: String
+    var pacienteId: String
+    var fecha: Date
+    var comunidad: String
+    var motivo: String?
+    var registradaPor: String
+
+    init(id: String = UUID().uuidString, pacienteId: String, fecha: Date = .now, comunidad: String,
+         motivo: String? = nil, registradaPor: String) {
+        self.id = id; self.pacienteId = pacienteId; self.fecha = fecha; self.comunidad = comunidad
+        self.motivo = motivo; self.registradaPor = registradaPor
+    }
+}
+
+/// Conducta a seguir después del estudio. Mismos valores que el enum de la API.
+enum Conducta: String, CaseIterable, Codable, Sendable {
+    case rutina1Anio = "rutina-1-anio"
+    case mastografiaTamizaje = "mastografia-tamizaje"
+    case imagenComplementaria = "imagen-complementaria"
+    case evaluacion6Meses = "evaluacion-6-meses"
+    case referencia
+    var nombre: String {
+        switch self {
+        case .rutina1Anio: "Rutina en 1 año"
+        case .mastografiaTamizaje: "Mastografía de tamizaje"
+        case .imagenComplementaria: "Imagen complementaria"
+        case .evaluacion6Meses: "Evaluación en 6 meses"
+        case .referencia: "Referencia"
+        }
     }
 }
 
@@ -92,7 +139,7 @@ final class Estudio {
 @Model
 final class EventoPendiente {
     @Attribute(.unique) var llave: String
-    var tipo: String        // "alta" | "estudio"
+    var tipo: String        // "alta" | "estudio" | "visita" | "actualizacion"
     var payload: Data       // JSON del DTO
     var creado: Date
 
@@ -117,8 +164,10 @@ struct NuevoEstudio: Sendable, Hashable {
     var fecha: Date = .now
     var resultado: Resultado = .pendiente
     var nota: String?
+    var clasificacion: String? = nil
+    var conducta: Conducta? = nil
 }
 
 enum Esquema {
-    static let modelos: [any PersistentModel.Type] = [Paciente.self, Estudio.self, EventoPendiente.self]
+    static let modelos: [any PersistentModel.Type] = [Paciente.self, Estudio.self, Visita.self, EventoPendiente.self]
 }

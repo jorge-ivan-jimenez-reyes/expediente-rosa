@@ -65,8 +65,11 @@ struct EscanearView: View {
                 }
                 .buttonStyle(.glass)
                 Menu {
+                    // Primero las hojas reales de EIRA, llenadas con datos ficticios.
+                    Button("Revisión mamaria (EIRA)") { usarEjemplo("eira-mamaria-1", "jpg") }
+                    Button("Citología (EIRA)") { usarEjemplo("eira-citologia", "jpg") }
                     ForEach(1...3, id: \.self) { i in
-                        Button("Hoja \(i)") { usarEjemplo(i) }
+                        Button("Hoja \(i)") { usarEjemplo("hoja\(i)", "png") }
                     }
                 } label: {
                     Label("Usar ejemplo", systemImage: "doc.text").frame(maxWidth: .infinity, minHeight: Tema.toque)
@@ -138,8 +141,8 @@ struct EscanearView: View {
         }
     }
 
-    private func usarEjemplo(_ i: Int) {
-        guard let url = Bundle.main.url(forResource: "hoja\(i)", withExtension: "png"),
+    private func usarEjemplo(_ nombre: String, _ formato: String) {
+        guard let url = Bundle.main.url(forResource: nombre, withExtension: formato),
               let img = UIImage(contentsOfFile: url.path) else { error = "No se encontró la hoja de ejemplo."; return }
         Task { await leer(img) }
     }

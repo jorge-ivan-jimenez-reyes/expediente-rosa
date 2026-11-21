@@ -118,7 +118,7 @@ final class Sincronizador {
 
     // MARK: - Preparar jornada
 
-    /// Baja las pacientes de la comunidad (con sus estudios) a SwiftData. No duplica: si ya existen, las actualiza.
+    /// Baja las pacientes de la comunidad (con sus estudios y visitas) a SwiftData. No duplica: si ya existen, las actualiza.
     /// Devuelve cuántas pacientes trajo el servidor.
     @discardableResult
     func prepararJornada(comunidad: String) async throws -> Int {
@@ -145,6 +145,15 @@ final class Sincronizador {
         let estudiosLocales = try contexto.fetch(FetchDescriptor<Estudio>(predicate: #Predicate { idsEstudio.contains($0.id) }))
         var estudioPorId = Dictionary(estudiosLocales.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
+        let visitasDTO = lista.flatMap { $0.visitas ?? [] }
+        let idsVisita = visitasDTO.map(\.id)
+        let visitasLocales = try contexto.fetch(FetchDescriptor<Visita>(predicate: #Predicate { idsVisita.contains($0.id) }))
+        var visitaPorId = Dictionary(visitasLocales.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+
+        // Pacientes con correcciones sin mandar: sus datos y su versión locales se respetan hasta sincronizar.
+        let conCambios = Set(try contexto.fetch(FetchDescriptor<EventoPendiente>(predicate: #Predicate { $0.tipo == "actualizacion" }))
+            .compactMap { try? JSONDecoder().decode(ActualizacionDTO.self, from: $0.payload).pacienteId })
+
         for d in lista {
             let p: Paciente
             if let ya = porId[d.id] {
@@ -156,13 +165,18 @@ final class Sincronizador {
             }
             // Lo que manda el servidor gana; la firma (solo en el teléfono) no se toca.
             p.folio = d.folio
-            p.nombre = d.nombre
-            p.apellidoPaterno = d.apellidoPaterno
-            p.apellidoMaterno = d.apellidoMaterno
-            p.nacimiento = d.nacimiento
-            p.edad = d.edad
-            p.comunidad = d.comunidad
-            p.municipio = d.municipio
+            if !conCambios.contains(d.id) {
+                p.nombre = d.nombre
+                p.apellidoPaterno = d.apellidoPaterno
+                p.apellidoMaterno = d.apellidoMaterno
+                p.nacimiento = d.nacimiento
+                p.edad = d.edad
+                p.comunidad = d.comunidad
+                p.municipio = d.municipio
+                p.entidadNacimiento = d.entidadNacimiento
+                p.idEira = d.idEira
+                p.version = d.version ?? 1
+            }
             p.creadaPor = d.creadaPor
             if let f = Fechas.leer(d.consentimiento) { p.consentimiento = f }
             if let f = Fechas.leer(d.creada) { p.creada = f }
@@ -171,14 +185,30 @@ final class Sincronizador {
                 let tipo = TipoEstudio(rawValue: e.tipo) ?? .exploracion
                 let resultado = Resultado(rawValue: e.resultado) ?? .pendiente
                 let fecha = Fechas.leer(e.fecha) ?? .now
+                let conducta = e.conducta.flatMap(Conducta.init(rawValue:))
                 if let ya = estudioPorId[e.id] {
                     ya.pacienteId = e.pacienteId; ya.tipo = tipo; ya.resultado = resultado
                     ya.fecha = fecha; ya.nota = e.nota; ya.registradoPor = e.registradoPor
+                    ya.visitaId = e.visitaId; ya.clasificacion = e.clasificacion; ya.conducta = conducta
                 } else {
                     let nuevo = Estudio(id: e.id, pacienteId: e.pacienteId, tipo: tipo, fecha: fecha,
-                                        resultado: resultado, nota: e.nota, registradoPor: e.registradoPor)
+                                        resultado: resultado, nota: e.nota, registradoPor: e.registradoPor,
+                                        visitaId: e.visitaId, clasificacion: e.clasificacion, conducta: conducta)
                     contexto.insert(nuevo)
                     estudioPorId[e.id] = nuevo
+                }
+            }
+
+            for v in d.visitas ?? [] {
+                let fecha = Fechas.leer(v.fecha) ?? .now
+                if let ya = visitaPorId[v.id] {
+                    ya.pacienteId = v.pacienteId; ya.fecha = fecha; ya.comunidad = v.comunidad
+                    ya.motivo = v.motivo; ya.registradaPor = v.registradaPor
+                } else {
+                    let nueva = Visita(id: v.id, pacienteId: v.pacienteId, fecha: fecha, comunidad: v.comunidad,
+                                       motivo: v.motivo, registradaPor: v.registradaPor)
+                    contexto.insert(nueva)
+                    visitaPorId[v.id] = nueva
                 }
             }
         }
@@ -224,6 +254,7 @@ final class Sincronizador {
         total.aplicados += r.aplicados
         total.repetidos += r.repetidos
         total.posiblesDuplicados += r.posiblesDuplicados
+        if let c = r.conflictos, !c.isEmpty { total.conflictos = (total.conflictos ?? []) + c }
     }
 
     /// Evento guardado → lo que espera la API. nil si el payload está dañado.
@@ -236,6 +267,12 @@ final class Sincronizador {
         case "estudio":
             guard let e = try? dec.decode(EstudioDTO.self, from: ev.payload) else { return nil }
             return EventoDTO(llave: ev.llave, tipo: "estudio", paciente: nil, estudio: e)
+        case "visita":
+            guard let v = try? dec.decode(VisitaDTO.self, from: ev.payload) else { return nil }
+            return EventoDTO(llave: ev.llave, tipo: "visita", paciente: nil, estudio: nil, visita: v)
+        case "actualizacion":
+            guard let a = try? dec.decode(ActualizacionDTO.self, from: ev.payload) else { return nil }
+            return EventoDTO(llave: ev.llave, tipo: "actualizacion", paciente: nil, estudio: nil, actualizacion: a)
         default:
             return nil
         }

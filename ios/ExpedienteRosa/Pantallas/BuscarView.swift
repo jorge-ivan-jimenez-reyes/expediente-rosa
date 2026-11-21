@@ -148,7 +148,7 @@ struct BuscarView: View {
             let q = ModoCaptura.consulta
             nombre = q.nombre; paterno = q.apellidoPaterno; materno = q.apellidoMaterno ?? ""
             edad = q.edad.map(String.init) ?? ""; comunidad = q.comunidad
-        case "expediente", "expediente-medico":
+        case "expediente", "expediente-medico", "editar", "estudio":
             if let p = pacientes.first(where: { $0.folio == ModoCaptura.folioExpediente }) { ruta = [p] }
         case "alta": alta = ModoCaptura.altaInicial
         case "escanear": escanear = true

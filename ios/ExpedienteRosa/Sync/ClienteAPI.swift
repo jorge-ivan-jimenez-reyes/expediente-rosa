@@ -63,6 +63,37 @@ struct ClienteAPI: Sendable {
                             cuerpo: Cuerpo(a: a, b: b, decision: unir ? "unir" : "separar"))
     }
 
+    // MARK: - Reto 1
+
+    /// GET /api/bitacora: quién, qué, cuándo (sin datos clínicos), el más nuevo primero. limite 1–500.
+    func bitacora(limite: Int = 50, pacienteId: String? = nil) async throws -> [EntradaBitacora] {
+        var q = [URLQueryItem(name: "limite", value: String(min(max(limite, 1), 500)))]
+        if let pacienteId { q.append(URLQueryItem(name: "pacienteId", value: pacienteId)) }
+        return try await pedir([EntradaBitacora].self, ruta: "bitacora", consulta: q)
+    }
+
+    /// GET /api/seguimiento: estudios por atender, vencidos primero.
+    func seguimiento(comunidad: String? = nil) async throws -> [SeguimientoDTO] {
+        var q: [URLQueryItem] = []
+        if let comunidad, !comunidad.isEmpty { q.append(URLQueryItem(name: "comunidad", value: comunidad)) }
+        return try await pedir([SeguimientoDTO].self, ruta: "seguimiento", consulta: q)
+    }
+
+    /// GET /api/conflictos: correcciones que no se aplicaron, más viejas primero.
+    func conflictos() async throws -> [ConflictoDTO] {
+        try await pedir([ConflictoDTO].self, ruta: "conflictos")
+    }
+
+    /// POST /api/conflictos/:id/resolver. Devuelve la versión nueva de la paciente si se aceptó.
+    @discardableResult
+    func resolverConflicto(id: String, aceptar: Bool, autor: String? = nil) async throws -> Int? {
+        struct Cuerpo: Encodable { var decision: String; var autor: String? }
+        struct Respuesta: Decodable { var ok: Bool; var version: Int? }
+        let r = try await pedir(Respuesta.self, ruta: "conflictos/\(id)/resolver", metodo: "POST",
+                                cuerpo: Cuerpo(decision: aceptar ? "aceptar" : "rechazar", autor: autor))
+        return r.version
+    }
+
     /// Ids del par: de las fichas, o de la llave "duplicado:<id1>|<id2>" si alguna ficha no vino.
     static func ids(de par: ParDuplicado) -> (String, String)? {
         if let a = par.a?.id, let b = par.b?.id { return (a, b) }

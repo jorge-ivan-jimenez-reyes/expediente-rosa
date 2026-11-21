@@ -7,11 +7,13 @@ import UIKit
 /// FICTICIOS en un ModelContainer en memoria, sin red. Sirve para sacar capturas con
 /// `xcrun simctl io … screenshot` sin tocar el simulador.
 ///
-/// Pantallas: buscar, buscar-resultados, alta, expediente, expediente-medico, escanear, jornada, revision.
+/// Pantallas: buscar, buscar-resultados, alta, expediente, expediente-medico, escanear, jornada, revision,
+/// y del Reto 1: editar, estudio, revision-conflictos, revision-seguimiento, bitacora.
 @MainActor
 enum ModoCaptura {
     static let pantallas = ["buscar", "buscar-resultados", "alta", "expediente", "expediente-medico",
-                            "escanear", "jornada", "revision"]
+                            "escanear", "jornada", "revision",
+                            "editar", "estudio", "revision-conflictos", "revision-seguimiento", "bitacora"]
 
     /// Lo que vino en `-pantalla` (los argumentos de lanzamiento entran a UserDefaults).
     static var pantalla: String? {
@@ -22,16 +24,24 @@ enum ModoCaptura {
     static var pestanaInicial: String {
         switch pantalla {
         case "jornada": "jornada"
-        case "revision": "revision"
+        case "revision", "revision-conflictos", "revision-seguimiento", "bitacora": "revision"
         default: "buscar"
         }
     }
 
     static var rol: Rol {
         switch pantalla {
-        case "expediente-medico": .medico
-        case "revision": .coordinadora
+        case "expediente-medico", "estudio": .medico
+        case "revision", "revision-conflictos", "revision-seguimiento", "bitacora": .coordinadora
         default: .enfermeria
+        }
+    }
+
+    static var seccionRevision: RevisionView.Seccion {
+        switch pantalla {
+        case "revision-conflictos": .conflictos
+        case "revision-seguimiento": .seguimiento
+        default: .duplicados
         }
     }
 
@@ -58,8 +68,7 @@ enum ModoCaptura {
         return (img, hoja)
     }
 
-    static var paresDemo: [ParDuplicado]? {
-        guard pantalla == "revision" else { return nil }
+    static var paresDemo: [ParDuplicado] {
         func dto(_ id: String, _ folio: String, _ n: String, _ p: String, _ m: String?, nac: String?, edad: Int?, _ c: String) -> PacienteDTO {
             PacienteDTO(id: id, folio: folio, nombre: n, apellidoPaterno: p, apellidoMaterno: m, nacimiento: nac, edad: edad,
                         comunidad: c, municipio: nil, consentimiento: "2026-11-18T09:12:00-06:00", creadaPor: "enf-1",
@@ -77,10 +86,62 @@ enum ModoCaptura {
         ]
     }
 
+    private static func corta(_ id: String, _ folio: String, _ n: String, _ p: String, _ m: String?, _ c: String) -> PacienteCorta {
+        PacienteCorta(id: id, folio: folio, nombre: n, apellidoPaterno: p, apellidoMaterno: m, comunidad: c)
+    }
+
+    private static func iso(dias: Int, horas: Int = 0) -> String {
+        ISO.texto(Date.now.addingTimeInterval(TimeInterval(-dias * 86_400 - horas * 3_600)))
+    }
+
+    static var conflictosDemo: [ConflictoDTO] {
+        [
+            ConflictoDTO(id: "c1", pacienteId: "p1", autor: "enf-tux-2", dispositivo: "ios-7f3a", creado: iso(dias: 0, horas: 2),
+                         motivo: "version-distinta", versionBase: 1, versionActual: 2,
+                         campos: [.init(campo: "nacimiento", propuesto: "1975-11-05", actual: "1975-05-11", alRecibir: "1975-05-11")],
+                         paciente: corta("p1", folioExpediente, "María Guadalupe", "Hernández", "Velázquez", "San Martín Peras")),
+            ConflictoDTO(id: "c2", pacienteId: "p2", autor: "enf-met-1", dispositivo: "ios-21bc", creado: iso(dias: 1),
+                         motivo: "version-distinta", versionBase: 1, versionActual: 3,
+                         campos: [.init(campo: "apellidoMaterno", propuesto: "Ybarra", actual: "Ibarra", alRecibir: "Ibarra"),
+                                  .init(campo: "edad", propuesto: 56, actual: 55, alRecibir: 55)],
+                         paciente: corta("p2", "MET-007", "Rosalba", "Quintero", "Ibarra", "Metlatónoc")),
+        ]
+    }
+
+    static var seguimientoDemo: [SeguimientoDTO] {
+        func fila(_ id: String, _ tipo: TipoEstudio, _ motivo: String, dias: Int, _ p: PacienteCorta) -> SeguimientoDTO {
+            SeguimientoDTO(estudioId: id, tipo: tipo.rawValue, fecha: iso(dias: 30), motivo: motivo,
+                           fechaLimite: iso(dias: -dias), vencido: dias < 0, diasRestantes: dias, paciente: p)
+        }
+        return [
+            fila("s1", .ultrasonido, "BI-RADS 3", dias: -70, corta("p1", folioExpediente, "María Guadalupe", "Hernández", "Velázquez", "San Martín Peras")),
+            fila("s2", .mastografia, "BI-RADS 4", dias: -5, corta("p3", "MET-012", "Eulalia", "García", "Luna", "Metlatónoc")),
+            fila("s3", .papanicolaou, "Bethesda anormal", dias: 3, corta("p4", "HUE-010", "Juana", "Bautista", nil, "Huejuquilla")),
+            fila("s4", .mastografia, "resultado anormal", dias: 12, corta("p5", "JUX-001", "María del Carmen", "López", "Hernández", "San Martín Peras")),
+        ]
+    }
+
+    static func bitacoraDemo(_ pacientes: [Paciente]) -> [EntradaBitacora] {
+        let id = { (folio: String) in pacientes.first { $0.folio == folio }?.id }
+        func e(_ n: Int, _ tipo: String, _ autor: String, _ folio: String, minutos: Int, campos: [String]? = nil) -> EntradaBitacora {
+            EntradaBitacora(id: "\(n)", cuando: ISO.texto(.now.addingTimeInterval(TimeInterval(-minutos * 60))), tipo: tipo,
+                            autor: autor, dispositivo: nil, pacienteId: id(folio), campos: campos)
+        }
+        return [
+            e(1, "conflicto-rechazar", "coordinadora", "MET-007", minutos: 4, campos: ["apellidoMaterno"]),
+            e(2, "conflicto", "enf-tux-2", folioExpediente, minutos: 18, campos: ["nacimiento"]),
+            e(3, "actualizacion", "enf-jux", folioExpediente, minutos: 26, campos: ["idEira", "entidadNacimiento"]),
+            e(4, "estudio", "med-jux", folioExpediente, minutos: 31),
+            e(5, "visita", "enf-jux", folioExpediente, minutos: 40),
+            e(6, "duplicado-unir", "coordinadora", "JUX-001", minutos: 55),
+            e(7, "alta", "enf-jux", "HUE-010", minutos: 62),
+        ]
+    }
+
     /// Contenedor en memoria con pacientes ficticias. Tres altas pasan por el Repositorio
     /// para que haya pendientes por mandar.
     static func contenedor() -> ModelContainer {
-        let c = try! ModelContainer(for: Paciente.self, Estudio.self, EventoPendiente.self,
+        let c = try! ModelContainer(for: Schema(Esquema.modelos),
                                     configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let ctx = c.mainContext
         let hace = { (dias: Int) in Calendar.current.date(byAdding: .day, value: -dias, to: .now)! }
@@ -88,14 +149,20 @@ enum ModoCaptura {
         let lupe = Paciente(folio: folioExpediente, nombre: "María Guadalupe", apellidoPaterno: "Hernández",
                             apellidoMaterno: "Velázquez", nacimiento: "1975-05-11", comunidad: "San Martín Peras",
                             municipio: "San Martín Peras, Oaxaca", consentimiento: hace(620), creadaPor: "enf-jux", creada: hace(620))
+        if pantalla != "editar" { lupe.idEira = "EIRA-0142"; lupe.entidadNacimiento = "Oaxaca"; lupe.version = 2 }
         ctx.insert(lupe)
-        let estudios: [(TipoEstudio, Int, Resultado, String?)] = [
-            (.ultrasonido, 252, .anormal, "Nódulo de 8 mm en mama izquierda. Control en 6 meses."),
-            (.papanicolaou, 252, .pendiente, nil),
-            (.mastografia, 620, .normal, nil),
+        // Dos visitas anteriores; los estudios cuelgan de su visita.
+        let v1 = Visita(pacienteId: lupe.id, fecha: hace(620), comunidad: "San Martín Peras", motivo: "jornada de tamizaje", registradaPor: "enf-jux")
+        let v2 = Visita(pacienteId: lupe.id, fecha: hace(252), comunidad: "Juxtlahuaca", motivo: "jornada de tamizaje", registradaPor: "enf-jux")
+        ctx.insert(v1); ctx.insert(v2)
+        let estudios: [(TipoEstudio, Visita, Resultado, String?, String?, Conducta?)] = [
+            (.ultrasonido, v2, .anormal, "Nódulo de 8 mm en mama izquierda.", "BI-RADS 3", .evaluacion6Meses),
+            (.papanicolaou, v2, .pendiente, nil, nil, nil),
+            (.mastografia, v1, .normal, nil, "BI-RADS 1", .rutina1Anio),
         ]
-        for (t, d, r, n) in estudios {
-            ctx.insert(Estudio(pacienteId: lupe.id, tipo: t, fecha: hace(d), resultado: r, nota: n, registradoPor: "med-jux"))
+        for (t, v, r, n, c, cd) in estudios {
+            ctx.insert(Estudio(pacienteId: lupe.id, tipo: t, fecha: v.fecha, resultado: r, nota: n, registradoPor: "med-jux",
+                               visitaId: v.id, clasificacion: c, conducta: cd))
         }
 
         let otras: [(String, String, String, String?, Int, String, String)] = [
