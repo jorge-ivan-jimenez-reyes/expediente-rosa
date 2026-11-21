@@ -93,7 +93,7 @@ struct Repositorio {
     }
 }
 
-fileprivate extension String {
+extension String {
     var limpio: String { trimmingCharacters(in: .whitespacesAndNewlines) }
     var nilSiVacio: String? { isEmpty ? nil : self }
 }
