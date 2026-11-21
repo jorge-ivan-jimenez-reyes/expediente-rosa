@@ -283,6 +283,7 @@ struct MuestrarioMascota: View {
                             VStack(spacing: Tema.Espacio.xs) {
                                 Mascota(estado: e, tamano: 56)
                                 Text(e.rawValue).font(.caption2).foregroundStyle(.secondary)
+                                    .lineLimit(1).minimumScaleFactor(0.6)
                             }
                             .frame(maxWidth: .infinity)
                         }
