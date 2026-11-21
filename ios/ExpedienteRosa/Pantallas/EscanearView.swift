@@ -66,6 +66,7 @@ struct EscanearView: View {
                 .buttonStyle(.glass)
                 Menu {
                     // Primero las hojas reales de EIRA, llenadas con datos ficticios.
+                    Button("Eulalia, marzo 2025 (EIRA)") { usarEjemplo("eulalia-p1", "jpg") }
                     Button("Revisión mamaria (EIRA)") { usarEjemplo("eira-mamaria-1", "jpg") }
                     Button("Citología (EIRA)") { usarEjemplo("eira-citologia", "jpg") }
                     ForEach(1...3, id: \.self) { i in

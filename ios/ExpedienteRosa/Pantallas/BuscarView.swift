@@ -64,7 +64,12 @@ struct BuscarView: View {
             .sheet(isPresented: $escanear) {
                 EscanearView { leida in
                     escanear = false
-                    alta = leida
+                    // La hoja llena la búsqueda: si ya vino, aparece abajo; si no, «Es nueva» abre el alta prellenada.
+                    withAnimation(Tema.resorte) {
+                        nombre = leida.nombre; paterno = leida.apellidoPaterno; materno = leida.apellidoMaterno ?? ""
+                        edad = leida.edad.map(String.init) ?? edadDesde(leida.nacimiento)
+                        comunidad = leida.comunidad
+                    }
                 }
             }
             .task(id: candidatas.first?.id) { await explicarPrimera() }
@@ -199,4 +204,10 @@ extension String {
 
 extension NuevaPaciente: Identifiable {
     public var id: String { [nombre, apellidoPaterno, apellidoMaterno ?? "", comunidad].joined(separator: "|") }
+}
+
+/// Edad a partir de "AAAA-MM-DD" para la búsqueda.
+private func edadDesde(_ nacimiento: String?) -> String {
+    guard let n = nacimiento, let y = Int(n.prefix(4)) else { return "" }
+    return String(Calendar.current.component(.year, from: .now) - y)
 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 /// Segunda visita: quién es, qué se le ha hecho y qué salió.
 /// Enfermería no ve resultados; el médico sí, con un resumen hecho en el teléfono.
@@ -261,18 +262,42 @@ struct AgregarEstudioView: View {
     @State private var dictado = ""
     @State private var interpretando = false
     @State private var guardado = false
+    @State private var foto: PhotosPickerItem?
+    @State private var leyendo = false
+    @State private var leido: String?
 
     var body: some View {
         NavigationStack {
             Form {
-                if Inteligencia.disponible {
-                    Section {
+                Section {
+                    HStack {
+                        PhotosPicker(selection: $foto, matching: .images) {
+                            Label("Leer hoja", systemImage: "doc.viewfinder")
+                        }
+                        Spacer()
+                        Menu("Ejemplo") {
+                            Button("Hoja de hoy: Eulalia") { leerEjemplo("eulalia-hoy-p2") }
+                            Button("Hoja de 2025: Eulalia") { leerEjemplo("eulalia-p2") }
+                        }
+                        if leyendo { ProgressView().padding(.leading, 8) }
+                    }
+                    if let leido {
+                        Label(leido, systemImage: "checkmark.circle.fill")
+                            .font(.footnote).foregroundStyle(Tema.verde)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                } header: {
+                    Text("Desde la hoja")
+                } footer: {
+                    Text("Foto de la hoja de diagnóstico. Se lee en el teléfono; revisa antes de guardar.")
+                }
+                Section {
                         TextField("mastografía normal, regresa en un año", text: $dictado, axis: .vertical)
                         Button {
                             Task { await interpretar() }
                         } label: {
                             HStack {
-                                Label("Llenar con IA", systemImage: "apple.intelligence")
+                                Label(Inteligencia.disponible ? "Llenar con IA" : "Llenar", systemImage: Inteligencia.disponible ? "apple.intelligence" : "text.badge.checkmark")
                                 if interpretando { Spacer(); ProgressView() }
                             }
                         }
@@ -282,7 +307,6 @@ struct AgregarEstudioView: View {
                     } footer: {
                         Text("Usa el micrófono del teclado. No necesita internet.")
                     }
-                }
                 Section("Estudio") {
                     Picker("Tipo", selection: $tipo) {
                         ForEach(TipoEstudio.allCases, id: \.self) { Text($0.nombre).tag($0) }
@@ -306,6 +330,12 @@ struct AgregarEstudioView: View {
             }
             .onChange(of: tipo) { if !Clasificacion.opciones(tipo).contains(clasificacion) { clasificacion = "" } }
             .onChange(of: clasificacion) { sugerir() }
+            .onChange(of: foto) { _, f in
+                Task {
+                    guard let f, let d = try? await f.loadTransferable(type: Data.self), let img = UIImage(data: d) else { return }
+                    await leerImagen(img)
+                }
+            }
             .navigationTitle("Estudio de hoy")
             .navigationBarTitleDisplayMode(.inline)
             .tint(Tema.rosa)
@@ -325,10 +355,39 @@ struct AgregarEstudioView: View {
 
     private func interpretar() async {
         interpretando = true
-        if let e = await Inteligencia.dictarEstudio(dictado) {
+        if Inteligencia.disponible, let e = await Inteligencia.dictarEstudio(dictado) {
             withAnimation(Tema.resorte) { tipo = e.tipo; resultado = e.resultado; nota = e.nota ?? nota }
         }
+        // Lo que el dictado dice con todas sus letras (BI-RADS, Bethesda, «referir») manda sobre el modelo.
+        var r = LecturaEstudio.desdeTexto(dictado)
+        r.nota = nil
+        aplicar(r, avisar: false)
         interpretando = false
+    }
+
+    private func aplicar(_ r: EstudioLeido, avisar: Bool = true) {
+        withAnimation(Tema.resorte) {
+            if let t = r.tipo { tipo = t }
+            if let c = r.clasificacion { clasificacion = c; sugerir() }
+            if r.referida { conducta = .referencia }
+            if let n = r.nota { nota = n }
+            if avisar {
+                leido = [r.clasificacion, r.referida ? "referida" : nil].compactMap { $0 }.joined(separator: " · ")
+                if leido?.isEmpty == true { leido = "No encontré BI-RADS ni Bethesda; revisa la nota" }
+            }
+        }
+    }
+
+    private func leerEjemplo(_ nombre: String) {
+        guard let url = Bundle.main.url(forResource: nombre, withExtension: "jpg"),
+              let img = UIImage(contentsOfFile: url.path) else { return }
+        Task { await leerImagen(img) }
+    }
+
+    private func leerImagen(_ img: UIImage) async {
+        leyendo = true; leido = nil
+        if let r = try? await LecturaEstudio.leer(img) { aplicar(r) } else { leido = "No se pudo leer la hoja" }
+        leyendo = false
     }
 
     /// Al elegir la clasificación propone la conducta y el resultado; el médico los puede cambiar.
