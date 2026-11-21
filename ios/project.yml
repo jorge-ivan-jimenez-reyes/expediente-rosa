@@ -1,0 +1,52 @@
+name: ExpedienteRosa
+options:
+  bundleIdPrefix: org.eira
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  ExpedienteRosa:
+    type: application
+    platform: iOS
+    sources: [ExpedienteRosa]
+    info:
+      path: ExpedienteRosa/Info.plist
+      properties:
+        CFBundleDisplayName: Expediente Rosa
+        CFBundleDevelopmentRegion: es-MX
+        UILaunchScreen: {}
+        API_URL: http://localhost:8787/api
+        NSCameraUsageDescription: Para leer hojas de registro en papel de jornadas anteriores.
+        NSMicrophoneUsageDescription: Para dictar el resultado de un estudio.
+        NSSpeechRecognitionUsageDescription: Para convertir el dictado en texto dentro del teléfono.
+        NSLocalNetworkUsageDescription: Para sincronizar con el servidor de la jornada.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.eira.expedienterosa
+        GENERATE_INFOPLIST_FILE: NO
+  ExpedienteRosaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [ExpedienteRosaTests]
+    dependencies:
+      - target: ExpedienteRosa
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  ExpedienteRosa:
+    build:
+      targets:
+        ExpedienteRosa: all
+        ExpedienteRosaTests: [test]
+    test:
+      targets: [ExpedienteRosaTests]

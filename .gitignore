@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+*.local
+test-results
+playwright-report
+ios/*.xcodeproj
+ios/build
+DerivedData
+.DS_Store

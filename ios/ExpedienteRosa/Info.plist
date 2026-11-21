@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_URL</key>
+	<string>http://localhost:8787/api</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>es-MX</string>
+	<key>CFBundleDisplayName</key>
+	<string>Expediente Rosa</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Para leer hojas de registro en papel de jornadas anteriores.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Para sincronizar con el servidor de la jornada.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Para dictar el resultado de un estudio.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Para convertir el dictado en texto dentro del teléfono.</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+</dict>
+</plist>
