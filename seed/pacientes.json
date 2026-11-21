@@ -1,0 +1,962 @@
+{
+  "_nota": "Datos 100% ficticios. Nombres inventados; las comunidades son reales solo como lugar. _grupo marca los pares de la misma señora escrita distinto (par-N) y los casos madre/hija (madre-hija-N); la API no lo recibe.",
+  "pacientes": [
+    {
+      "id": "6fdb1d06-3db4-52e7-ab98-b4a9fa10f135",
+      "folio": "JUX-001",
+      "nombre": "María del Carmen",
+      "apellidoPaterno": "López",
+      "apellidoMaterno": "Hernández",
+      "nacimiento": "1974-06-12",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:11:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:11:00-06:00",
+      "_grupo": "par-1",
+      "estudios": [
+        {
+          "id": "667acf1d-c396-51e2-af9c-ba41a79c02a8",
+          "tipo": "mastografia",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        },
+        {
+          "id": "48233a3a-4ad1-5e19-a9f4-456790f5abf0",
+          "tipo": "exploracion",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "35c02e5b-3acf-5db5-aaef-391722eb9660",
+      "folio": "JUX-002",
+      "nombre": "Ma. del Carmen",
+      "apellidoPaterno": "López",
+      "apellidoMaterno": "Hdz",
+      "edad": 52,
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2026-11-18T09:12:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2026-11-18T09:12:00-06:00",
+      "_grupo": "par-1",
+      "estudios": [
+        {
+          "id": "2e7f053a-722a-5aa2-a9d6-542d56cc6d04",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-18",
+          "resultado": "pendiente",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "788ff09d-41d6-56cc-a52d-b618cca2c0af",
+      "folio": "JUX-003",
+      "nombre": "Bertha",
+      "apellidoPaterno": "Vázquez",
+      "apellidoMaterno": "Ruiz",
+      "nacimiento": "1969-10-03",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:13:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:13:00-06:00",
+      "_grupo": "par-2",
+      "estudios": [
+        {
+          "id": "36af0bd3-470a-5fb5-a44d-91fb20de8e07",
+          "tipo": "mastografia",
+          "fecha": "2025-03-14",
+          "resultado": "anormal",
+          "nota": "BI-RADS 4 en mama izquierda. Se refiere a biopsia.",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "b573a694-e572-5354-a954-fa408709b06d",
+      "folio": "JUX-004",
+      "nombre": "Berta",
+      "apellidoPaterno": "Basquez",
+      "apellidoMaterno": "Ruiz",
+      "nacimiento": "1969-10-03",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2026-11-18T09:14:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2026-11-18T09:14:00-06:00",
+      "_grupo": "par-2",
+      "estudios": [
+        {
+          "id": "119e9fbb-9285-5b91-a062-cda0b2547661",
+          "tipo": "ultrasonido",
+          "fecha": "2026-11-18",
+          "resultado": "pendiente",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "0c51fa08-d375-58f4-a7a1-e67bb8996994",
+      "folio": "MET-001",
+      "nombre": "Guadalupe",
+      "apellidoPaterno": "Martínez",
+      "apellidoMaterno": "Cruz",
+      "nacimiento": "1968-01-25",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:11:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:11:00-06:00",
+      "_grupo": "par-3",
+      "estudios": [
+        {
+          "id": "d4075e77-fd65-5e80-adab-78d48010ea0c",
+          "tipo": "papanicolaou",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        },
+        {
+          "id": "b60058a5-ab5f-56b3-a888-f4fc8b5f9017",
+          "tipo": "exploracion",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "463344a9-e962-53fa-a802-6d57b6992941",
+      "folio": "MET-002",
+      "nombre": "Lupe",
+      "apellidoPaterno": "Mtz",
+      "edad": 58,
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2026-11-19T09:12:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2026-11-19T09:12:00-06:00",
+      "_grupo": "par-3",
+      "estudios": [
+        {
+          "id": "7e5ce999-840a-5c1a-a8ad-9b07e752ee94",
+          "tipo": "mastografia",
+          "fecha": "2026-11-19",
+          "resultado": "pendiente",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "932ad353-c88b-5224-a965-da8fd1263015",
+      "folio": "MET-003",
+      "nombre": "Rosario",
+      "apellidoPaterno": "Hernández",
+      "apellidoMaterno": "Jiménez",
+      "nacimiento": "1977-08-09",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:13:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:13:00-06:00",
+      "_grupo": "par-4",
+      "estudios": [
+        {
+          "id": "7d61473b-5bf4-5b4d-a9b6-a4eef2982209",
+          "tipo": "papanicolaou",
+          "fecha": "2025-06-20",
+          "resultado": "anormal",
+          "nota": "LEIBG (lesión de bajo grado). Repetir en 6 meses.",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "a402571a-6201-58cc-a6a9-4b118d24093b",
+      "folio": "MET-004",
+      "nombre": "Chayo",
+      "apellidoPaterno": "Hernandez",
+      "apellidoMaterno": "Gimenez",
+      "edad": 49,
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2026-11-19T09:14:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2026-11-19T09:14:00-06:00",
+      "_grupo": "par-4",
+      "estudios": [
+        {
+          "id": "7704a6ef-39d3-5d71-a1ca-0409ad84f683",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-19",
+          "resultado": "pendiente",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "0a67cb5d-32b2-5870-adcf-ebb88b322120",
+      "folio": "HUE-001",
+      "nombre": "Yolanda",
+      "apellidoPaterno": "Sánchez",
+      "apellidoMaterno": "Ramírez",
+      "nacimiento": "1981-02-14",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:11:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:11:00-06:00",
+      "_grupo": "par-5",
+      "estudios": [
+        {
+          "id": "92c7c7c9-e588-52c0-a8e5-7ba2e3a92213",
+          "tipo": "ultrasonido",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "9dd4a03c-5aec-5cea-a89f-3a4130c1f8f0",
+      "folio": "HUE-002",
+      "nombre": "Yola",
+      "apellidoPaterno": "Sanches",
+      "apellidoMaterno": "Ramires",
+      "edad": 45,
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2026-11-20T09:12:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2026-11-20T09:12:00-06:00",
+      "_grupo": "par-5",
+      "estudios": [
+        {
+          "id": "d58d3181-2a66-5b8a-acf3-94b14a955e31",
+          "tipo": "mastografia",
+          "fecha": "2026-11-20",
+          "resultado": "pendiente",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "e7a0eb30-bf4e-54d0-aa82-7c0eb1360369",
+      "folio": "HUE-003",
+      "nombre": "Juana",
+      "apellidoPaterno": "Gómez",
+      "apellidoMaterno": "Villalobos",
+      "nacimiento": "1972-05-30",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:13:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:13:00-06:00",
+      "_grupo": "par-6",
+      "estudios": [
+        {
+          "id": "6507b2ff-5f65-5b7c-a8b2-01b144175b48",
+          "tipo": "mastografia",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        },
+        {
+          "id": "bca44a0c-5bdd-553e-a16d-88d573006b07",
+          "tipo": "papanicolaou",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "340e78b8-0f88-569b-af2d-d83398fb6b5b",
+      "folio": "HUE-004",
+      "nombre": "Juana",
+      "apellidoPaterno": "Gomes",
+      "apellidoMaterno": "Viyalobos",
+      "nacimiento": "1972-05-30",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2026-11-20T09:14:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2026-11-20T09:14:00-06:00",
+      "_grupo": "par-6",
+      "estudios": [
+        {
+          "id": "135e201c-aa08-5f3e-ab99-8ba5dc73c179",
+          "tipo": "exploracion",
+          "fecha": "2026-11-20",
+          "resultado": "anormal",
+          "nota": "Nódulo palpable en cuadrante superior externo derecho.",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "09c591c1-0207-5ab0-a21e-b8b2b5c0048f",
+      "folio": "MET-005",
+      "nombre": "Felipa",
+      "apellidoPaterno": "Ramírez",
+      "apellidoMaterno": "Ortiz",
+      "nacimiento": "1956-04-03",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:15:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:15:00-06:00",
+      "_grupo": "madre-hija-1",
+      "estudios": [
+        {
+          "id": "cb8dae56-b4ba-5c36-a2e8-f95187b80215",
+          "tipo": "mastografia",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "38d20cda-330e-5590-a8b4-43cc1d59c807",
+      "folio": "MET-006",
+      "nombre": "Felipa",
+      "apellidoPaterno": "Ramírez",
+      "apellidoMaterno": "Ortiz",
+      "nacimiento": "1983-09-18",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2026-11-19T09:16:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2026-11-19T09:16:00-06:00",
+      "_grupo": "madre-hija-1",
+      "estudios": [
+        {
+          "id": "d537c875-561f-51d0-a6e8-e8cef3947e4a",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-19",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "f5b9bf6b-4cef-56c1-a0f4-8e100684c59e",
+      "folio": "HUE-005",
+      "nombre": "Margarita",
+      "apellidoPaterno": "Cruz",
+      "apellidoMaterno": "Bautista",
+      "nacimiento": "1960-11-30",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:15:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:15:00-06:00",
+      "_grupo": "madre-hija-2",
+      "estudios": [
+        {
+          "id": "8dca6955-adc8-5c25-a842-ec9d3176be96",
+          "tipo": "mastografia",
+          "fecha": "2025-09-05",
+          "resultado": "anormal",
+          "nota": "BI-RADS 3. Control en 6 meses.",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "b3344df6-fa2e-5778-ace2-ec477333a194",
+      "folio": "HUE-006",
+      "nombre": "Margarita",
+      "apellidoPaterno": "Cruz",
+      "apellidoMaterno": "Bautista",
+      "nacimiento": "1988-02-07",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2026-11-20T09:16:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2026-11-20T09:16:00-06:00",
+      "_grupo": "madre-hija-2",
+      "estudios": [
+        {
+          "id": "56c9a98e-606a-5fc0-a80e-9a179613a2bd",
+          "tipo": "ultrasonido",
+          "fecha": "2026-11-20",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "0c7efb31-3050-5eac-ade0-dd8ae867d0dd",
+      "folio": "JUX-005",
+      "nombre": "Catalina",
+      "apellidoPaterno": "Mendoza",
+      "apellidoMaterno": "Pérez",
+      "nacimiento": "1965-07-21",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:15:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:15:00-06:00",
+      "estudios": [
+        {
+          "id": "6ad0cdee-a0c7-590c-a4f9-df54a3a637b5",
+          "tipo": "mastografia",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "9e23d9bb-3342-549d-a53b-e3b33eb7d2d6",
+      "folio": "JUX-006",
+      "nombre": "Antonia",
+      "apellidoPaterno": "Santiago",
+      "apellidoMaterno": "Reyes",
+      "edad": 41,
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:16:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:16:00-06:00",
+      "estudios": [
+        {
+          "id": "7004405d-042b-5c4d-a63c-d6c1cf91b132",
+          "tipo": "papanicolaou",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "06097c1e-57d2-5aee-aa4f-d587cc8dc475",
+      "folio": "JUX-007",
+      "nombre": "Eulalia",
+      "apellidoPaterno": "García",
+      "apellidoMaterno": "Luna",
+      "nacimiento": "1958-12-02",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:17:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:17:00-06:00",
+      "estudios": [
+        {
+          "id": "edce304e-3213-5938-ac61-8b0360dfc515",
+          "tipo": "mastografia",
+          "fecha": "2025-03-14",
+          "resultado": "anormal",
+          "nota": "BI-RADS 4. Pendiente cita en hospital de Huajuapan.",
+          "registradoPor": "med-jux"
+        },
+        {
+          "id": "e6c94db9-b9a9-5e1d-a9e2-8ca728a8ef8a",
+          "tipo": "ultrasonido",
+          "fecha": "2025-03-14",
+          "resultado": "anormal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "891046b5-34c2-5bb0-a9bd-74bfd8d87ce8",
+      "folio": "JUX-008",
+      "nombre": "Isabel",
+      "apellidoPaterno": "Ortiz",
+      "apellidoMaterno": "Aguilar",
+      "nacimiento": "1990-03-15",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2026-11-18T09:18:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2026-11-18T09:18:00-06:00",
+      "estudios": [
+        {
+          "id": "0f0ddc6b-637e-500a-a178-a8cb8475313c",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-18",
+          "resultado": "pendiente",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "e5ee44f1-5cbe-5c63-a7ac-43981d547e45",
+      "folio": "JUX-009",
+      "nombre": "Teodora",
+      "apellidoPaterno": "Bautista",
+      "edad": 63,
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2026-11-18T09:19:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2026-11-18T09:19:00-06:00",
+      "estudios": [
+        {
+          "id": "c4f4a44c-c1af-5632-af19-6e2389cd510f",
+          "tipo": "exploracion",
+          "fecha": "2026-11-18",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "c2933d12-910f-560c-a142-2934883eb625",
+      "folio": "JUX-010",
+      "nombre": "Leticia",
+      "apellidoPaterno": "Flores",
+      "apellidoMaterno": "Vargas",
+      "nacimiento": "1983-05-08",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:20:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:20:00-06:00",
+      "estudios": [
+        {
+          "id": "ef90aa87-6ee8-5c36-a02c-92cf324ecd4d",
+          "tipo": "papanicolaou",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        },
+        {
+          "id": "6fcb8a3f-e727-5533-a355-63a4aa767744",
+          "tipo": "exploracion",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "91a6c6f8-7cc7-594f-ad60-867fb45942b0",
+      "folio": "JUX-011",
+      "nombre": "Refugio",
+      "apellidoPaterno": "Domínguez",
+      "apellidoMaterno": "Salazar",
+      "nacimiento": "1971-09-27",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2026-11-18T09:21:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2026-11-18T09:21:00-06:00",
+      "estudios": [
+        {
+          "id": "1b72ec18-a7ec-5459-ae07-0579091be4c6",
+          "tipo": "mastografia",
+          "fecha": "2026-11-18",
+          "resultado": "pendiente",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "0867cd11-843c-53a5-a971-5e4e77ff8d17",
+      "folio": "JUX-012",
+      "nombre": "Natalia",
+      "apellidoPaterno": "Chávez",
+      "apellidoMaterno": "Morales",
+      "nacimiento": "1995-01-11",
+      "comunidad": "San Martín Peras",
+      "municipio": "San Martín Peras, Oaxaca",
+      "consentimiento": "2025-03-14T09:22:00-06:00",
+      "creadaPor": "enf-jux",
+      "creada": "2025-03-14T09:22:00-06:00",
+      "estudios": [
+        {
+          "id": "430cdaf0-6574-5e5d-a6d5-bdace303a0bc",
+          "tipo": "ultrasonido",
+          "fecha": "2025-03-14",
+          "resultado": "normal",
+          "registradoPor": "med-jux"
+        }
+      ]
+    },
+    {
+      "id": "3a97c82d-023a-5b8b-a431-e75fa958da1b",
+      "folio": "MET-007",
+      "nombre": "Dolores",
+      "apellidoPaterno": "Rojas",
+      "apellidoMaterno": "Navarro",
+      "nacimiento": "1962-02-19",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:17:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:17:00-06:00",
+      "estudios": [
+        {
+          "id": "07e2b85c-ca82-5271-a910-eb07a60712fa",
+          "tipo": "mastografia",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "4354d65f-92f3-5e8c-ae25-9cb13c9c5a72",
+      "folio": "MET-008",
+      "nombre": "Estela",
+      "apellidoPaterno": "Torres",
+      "apellidoMaterno": "Campos",
+      "edad": 38,
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:18:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:18:00-06:00",
+      "estudios": [
+        {
+          "id": "c9b65272-d50a-5f49-a836-c924a0a60cea",
+          "tipo": "papanicolaou",
+          "fecha": "2025-06-20",
+          "resultado": "anormal",
+          "nota": "ASC-US. Se toma VPH.",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "25206fbf-4430-501a-a46d-b55ed9b0e736",
+      "folio": "MET-009",
+      "nombre": "Petra",
+      "apellidoPaterno": "Velasco",
+      "apellidoMaterno": "Ríos",
+      "nacimiento": "1959-06-06",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2026-11-19T09:19:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2026-11-19T09:19:00-06:00",
+      "estudios": [
+        {
+          "id": "239bdb5e-c9e9-5281-acc1-c0326f29946a",
+          "tipo": "mastografia",
+          "fecha": "2026-11-19",
+          "resultado": "pendiente",
+          "registradoPor": "med-met"
+        },
+        {
+          "id": "ca469eb4-71e0-5372-a16f-a000a4287dd8",
+          "tipo": "exploracion",
+          "fecha": "2026-11-19",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "7613d31c-0001-5bd4-a902-504b8bc3d0b9",
+      "folio": "MET-010",
+      "nombre": "Irma",
+      "apellidoPaterno": "Castillo",
+      "apellidoMaterno": "Medina",
+      "nacimiento": "1979-11-23",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:20:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:20:00-06:00",
+      "estudios": [
+        {
+          "id": "50e1f9fc-b7ab-5dec-a248-d3d7ce9783a6",
+          "tipo": "papanicolaou",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "a178c384-1e58-5c00-a66d-5f2c963f2c6b",
+      "folio": "MET-011",
+      "nombre": "Lucía",
+      "apellidoPaterno": "Herrera",
+      "apellidoMaterno": "Delgado",
+      "nacimiento": "1986-04-17",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2026-11-19T09:21:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2026-11-19T09:21:00-06:00",
+      "estudios": [
+        {
+          "id": "9f04d9c8-0a62-5a34-aaca-140c7335b95e",
+          "tipo": "ultrasonido",
+          "fecha": "2026-11-19",
+          "resultado": "pendiente",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "00960353-e282-5ece-a5cd-02562ad2a371",
+      "folio": "MET-012",
+      "nombre": "Socorro",
+      "apellidoPaterno": "Nava",
+      "apellidoMaterno": "Guzmán",
+      "edad": 55,
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:22:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:22:00-06:00",
+      "estudios": [
+        {
+          "id": "3af69634-60cb-5c5d-ab0c-34f52a002b04",
+          "tipo": "mastografia",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        },
+        {
+          "id": "37204bbe-26f5-5c53-acfe-90ca16f098ca",
+          "tipo": "papanicolaou",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "fe5061f7-1da0-54b1-aec3-544c7e19c495",
+      "folio": "MET-013",
+      "nombre": "Agustina",
+      "apellidoPaterno": "Peralta",
+      "apellidoMaterno": "Solís",
+      "nacimiento": "1967-10-30",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2026-11-19T09:23:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2026-11-19T09:23:00-06:00",
+      "estudios": [
+        {
+          "id": "c7e8ceee-bbfc-5052-a74e-3e95b36a3990",
+          "tipo": "exploracion",
+          "fecha": "2026-11-19",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "0ad41154-7ad4-5eeb-a990-b3ab0b5449c0",
+      "folio": "MET-014",
+      "nombre": "Viviana",
+      "apellidoPaterno": "Salgado",
+      "apellidoMaterno": "Moreno",
+      "nacimiento": "1992-08-02",
+      "comunidad": "Metlatónoc",
+      "municipio": "Metlatónoc, Guerrero",
+      "consentimiento": "2025-06-20T09:24:00-06:00",
+      "creadaPor": "enf-met",
+      "creada": "2025-06-20T09:24:00-06:00",
+      "estudios": [
+        {
+          "id": "ea697939-b7c2-514b-aa40-4d0117f58bc9",
+          "tipo": "papanicolaou",
+          "fecha": "2025-06-20",
+          "resultado": "normal",
+          "registradoPor": "med-met"
+        }
+      ]
+    },
+    {
+      "id": "0c25070f-584d-5de1-a586-7f3edcf3c6b4",
+      "folio": "HUE-007",
+      "nombre": "Graciela",
+      "apellidoPaterno": "Carrillo",
+      "apellidoMaterno": "Ibarra",
+      "nacimiento": "1964-03-09",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:17:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:17:00-06:00",
+      "estudios": [
+        {
+          "id": "cd40690b-0951-501e-a030-24777bb67781",
+          "tipo": "mastografia",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "f5019c48-8ce7-5983-a9e3-07d1c52ae51d",
+      "folio": "HUE-008",
+      "nombre": "Martina",
+      "apellidoPaterno": "De la Torre",
+      "apellidoMaterno": "Rentería",
+      "nacimiento": "1975-12-12",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2026-11-20T09:18:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2026-11-20T09:18:00-06:00",
+      "estudios": [
+        {
+          "id": "d0e8a072-3dbf-56e9-a217-db4c72234e83",
+          "tipo": "mastografia",
+          "fecha": "2026-11-20",
+          "resultado": "pendiente",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "4aa95c50-92f6-5acb-a867-9083d872e9f6",
+      "folio": "HUE-009",
+      "nombre": "Ofelia",
+      "apellidoPaterno": "Robles",
+      "apellidoMaterno": "Zamora",
+      "edad": 47,
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:19:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:19:00-06:00",
+      "estudios": [
+        {
+          "id": "34ee33ef-0f0a-5e81-a5c1-4c6d514f349e",
+          "tipo": "papanicolaou",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        },
+        {
+          "id": "0f1c77fe-59dc-5b7a-a376-3a8364681003",
+          "tipo": "ultrasonido",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "5a6c06bd-d4bd-5c52-a44c-fa3c285adea9",
+      "folio": "HUE-010",
+      "nombre": "Elvira",
+      "apellidoPaterno": "Montes",
+      "apellidoMaterno": "Arellano",
+      "nacimiento": "1957-07-04",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:20:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:20:00-06:00",
+      "estudios": [
+        {
+          "id": "4d6a6efa-ef5a-5cc3-a01d-76c41e9da424",
+          "tipo": "mastografia",
+          "fecha": "2025-09-05",
+          "resultado": "anormal",
+          "nota": "BI-RADS 5. Referida a oncología en Guadalajara.",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "e6be4f0b-14ed-58f0-a563-70ad5ec81524",
+      "folio": "HUE-011",
+      "nombre": "Silvia",
+      "apellidoPaterno": "Escobedo",
+      "apellidoMaterno": "Lara",
+      "nacimiento": "1989-09-21",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2026-11-20T09:21:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2026-11-20T09:21:00-06:00",
+      "estudios": [
+        {
+          "id": "b4f4cacf-43ba-594e-af9b-8f927f252713",
+          "tipo": "papanicolaou",
+          "fecha": "2026-11-20",
+          "resultado": "pendiente",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "b5ab5a6a-5b5a-560f-a02e-21737b4ec224",
+      "folio": "HUE-012",
+      "nombre": "Rebeca",
+      "apellidoPaterno": "Valdez",
+      "apellidoMaterno": "Quintero",
+      "nacimiento": "1980-01-28",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:22:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:22:00-06:00",
+      "estudios": [
+        {
+          "id": "3784c712-3082-5f71-a3cf-43b90af6d9f3",
+          "tipo": "exploracion",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "f31c600f-5500-5e0b-a2a6-b1bb9fefbd85",
+      "folio": "HUE-013",
+      "nombre": "Amparo",
+      "apellidoPaterno": "Jáuregui",
+      "apellidoMaterno": "Fuentes",
+      "edad": 60,
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2026-11-20T09:23:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2026-11-20T09:23:00-06:00",
+      "estudios": [
+        {
+          "id": "86e8d19e-dc25-5f95-a539-294042c6b8db",
+          "tipo": "mastografia",
+          "fecha": "2026-11-20",
+          "resultado": "pendiente",
+          "registradoPor": "med-hue"
+        }
+      ]
+    },
+    {
+      "id": "6e13a562-30be-59d1-a874-64eae9b0308d",
+      "folio": "HUE-014",
+      "nombre": "Norma",
+      "apellidoPaterno": "Ochoa",
+      "apellidoMaterno": "Cervantes",
+      "nacimiento": "1984-06-16",
+      "comunidad": "Huejuquilla",
+      "municipio": "Huejuquilla el Alto, Jalisco",
+      "consentimiento": "2025-09-05T09:24:00-06:00",
+      "creadaPor": "enf-hue",
+      "creada": "2025-09-05T09:24:00-06:00",
+      "estudios": [
+        {
+          "id": "d321abe9-4570-52e8-af1e-768b184a9bc7",
+          "tipo": "ultrasonido",
+          "fecha": "2025-09-05",
+          "resultado": "normal",
+          "registradoPor": "med-hue"
+        }
+      ]
+    }
+  ]
+}
