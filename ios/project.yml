@@ -27,7 +27,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         API_URL: http://localhost:8787/api
-        API_URL_DISPOSITIVO: https://explorer-cope-thank-these.trycloudflare.com/api
+        API_URL_DISPOSITIVO: https://threatening-chosen-theme-elite.trycloudflare.com/api
         NSCameraUsageDescription: Para leer hojas de registro en papel de jornadas anteriores.
         NSMicrophoneUsageDescription: Para dictar el resultado de un estudio.
         NSSpeechRecognitionUsageDescription: Para convertir el dictado en texto dentro del teléfono.
